@@ -460,7 +460,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   const [pendingTournament, setPendingTournament] = useState(null);
   const [newMatch, setNewMatch] = useState({
     date: new Date().toISOString().split('T')[0],
-    time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: []
+    time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null
   });
 
   const locs = ['Wrexham Tennis Centre', 'Padel Shed Wrexham', 'Ace Padel Club @ Lion Quays', 'Padel at CNW Golf Academy'];
@@ -520,19 +520,26 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
 
   const createMatch = async () => {
     if (newMatch.selectedPlayers.length >= 4 && newMatch.courtFee) {
+      const costPerPlayer = parseFloat(newMatch.courtFee) / newMatch.selectedPlayers.length;
+      
       await db.collection('matches').add({
         ...newMatch,
         courtFee: parseFloat(newMatch.courtFee),
+        costPerPlayer: costPerPlayer,
         players: newMatch.selectedPlayers.map(id => {
           const player = players.find(p => p.id === id);
-          return { id, name: player.name, paid: false };
+          return { 
+            id, 
+            name: player.name, 
+            paid: id === newMatch.paymentOrganizer // Organizer marked as paid
+          };
         }),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
       setNewMatch({
         date: new Date().toISOString().split('T')[0],
-        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: []
+        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null
       });
       setShowNewMatch(false);
     }
@@ -886,36 +893,72 @@ function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePaym
       </div>
 
       {!isUp && !isTournament && (
-        <div className="grid grid-cols-2 gap-2">
-          {(match.players || []).map(p => {
-            const playerInfo = players.find(pl => pl.id === p.id);
-            const canPay = isAdmin || userPlayer?.id === p.id;
-            return (
-              <div key={p.id} className="border rounded-lg p-2">
-                <div onClick={() => canPay && onTogglePayment(match.id, p.id)}
-                  className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
-                  <span className="text-sm">{p.name}</span>
-                  {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
-                </div>
-                {!p.paid && playerInfo && userPlayer?.id === p.id && (
-                  <div className="mt-2 pt-2 border-t flex gap-1 flex-wrap">
-                    {playerInfo.paypalLink && (
-                      <a href={playerInfo.paypalLink} target="_blank" rel="noopener noreferrer"
-                        className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">PayPal</a>
-                    )}
-                    {playerInfo.revolutLink && (
-                      <a href={playerInfo.revolutLink} target="_blank" rel="noopener noreferrer"
-                        className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded">Revolut</a>
-                    )}
-                    {playerInfo.bankDetails && (
-                      <button onClick={() => { navigator.clipboard.writeText(playerInfo.bankDetails); alert('Copied!'); }}
-                        className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Bank</button>
-                    )}
+        <div className="space-y-3">
+          {match.costPerPlayer && (
+            <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-center">
+              <span className="text-sm font-semibold text-yellow-900">£{match.costPerPlayer.toFixed(2)} per player</span>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-2 gap-2">
+            {(match.players || []).map(p => {
+              const playerInfo = players.find(pl => pl.id === p.id);
+              const canPay = isAdmin || userPlayer?.id === p.id;
+              const isOrganizer = p.id === match.paymentOrganizer;
+              
+              return (
+                <div key={p.id} className={`border-2 rounded-lg p-2 ${isOrganizer ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
+                  <div onClick={() => canPay && onTogglePayment(match.id, p.id)}
+                    className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
+                    <div>
+                      <span className="text-sm font-medium">{p.name}</span>
+                      {isOrganizer && <span className="ml-1 text-xs text-green-700">💰 Paid court</span>}
+                    </div>
+                    {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                  
+                  {!p.paid && !isOrganizer && playerInfo && (userPlayer?.id === p.id || isAdmin) && (
+                    <div className="mt-2 pt-2 border-t">
+                      {match.paymentOrganizer && (() => {
+                        const organizer = players.find(pl => pl.id === match.paymentOrganizer);
+                        return organizer ? (
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-600">
+                              Pay <strong>{organizer.name}</strong>:
+                            </div>
+                            <div className="flex gap-1 flex-wrap">
+                              {organizer.paypalLink && (
+                                <a href={organizer.paypalLink} target="_blank" rel="noopener noreferrer"
+                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                  PayPal
+                                </a>
+                              )}
+                              {organizer.revolutLink && (
+                                <a href={organizer.revolutLink} target="_blank" rel="noopener noreferrer"
+                                  className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200">
+                                  Revolut
+                                </a>
+                              )}
+                              {organizer.bankDetails && (
+                                <button 
+                                  onClick={() => { 
+                                    navigator.clipboard.writeText(organizer.bankDetails); 
+                                    alert('Bank details copied!\n' + organizer.bankDetails); 
+                                  }}
+                                  className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
+                                  Bank
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -933,6 +976,7 @@ function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePaym
 function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRound, onDelete }) {
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [showTimeModal, setShowTimeModal] = useState(false);
+  const [timeModalMatch, setTimeModalMatch] = useState(null);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   
@@ -954,12 +998,24 @@ function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRoun
     setSelectedMatch(null);
   };
 
-  const saveMatchTime = async (roundIdx, matchIdx) => {
-    if (!startTime || !endTime) return;
+  const openTimeModal = (matchIdx) => {
+    const m = currentRound.matches[matchIdx];
+    setTimeModalMatch(matchIdx);
+    setStartTime(m.startTime || '');
+    setEndTime(m.endTime || '');
+    setShowTimeModal(true);
+  };
+
+  const saveMatchTime = async () => {
+    if (!startTime || !endTime) {
+      alert('Please enter both start and end times');
+      return;
+    }
     
     const newRounds = [...match.tournamentRounds];
-    newRounds[roundIdx].matches[matchIdx].startTime = startTime;
-    newRounds[roundIdx].matches[matchIdx].endTime = endTime;
+    const roundIdx = currentRound.number - 1;
+    newRounds[roundIdx].matches[timeModalMatch].startTime = startTime;
+    newRounds[roundIdx].matches[timeModalMatch].endTime = endTime;
     
     await db.collection('matches').doc(match.id).update({
       tournamentRounds: newRounds
@@ -968,7 +1024,7 @@ function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRoun
     setShowTimeModal(false);
     setStartTime('');
     setEndTime('');
-    setSelectedMatch(null);
+    setTimeModalMatch(null);
   };
 
   return (
@@ -1053,10 +1109,7 @@ function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRoun
                     )}
                     {isAdmin && !hasScores && (
                       <button 
-                        onClick={() => {
-                          setSelectedMatch(idx);
-                          setShowTimeModal(true);
-                        }}
+                        onClick={() => openTimeModal(idx)}
                         className="text-xs text-indigo-600 hover:text-indigo-800">
                         ⏱️ Set Time
                       </button>
@@ -1133,7 +1186,7 @@ function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRoun
             })}
           </div>
 
-          {showTimeModal && selectedMatch !== null && (
+          {showTimeModal && timeModalMatch !== null && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-lg p-6 max-w-sm w-full">
                 <h3 className="font-bold mb-4">Set Match Time</h3>
@@ -1158,7 +1211,7 @@ function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRoun
                   </div>
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => saveMatchTime(currentRound.number - 1, selectedMatch)}
+                      onClick={saveMatchTime}
                       className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                       Save
                     </button>
@@ -1167,7 +1220,7 @@ function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRoun
                         setShowTimeModal(false);
                         setStartTime('');
                         setEndTime('');
-                        setSelectedMatch(null);
+                        setTimeModalMatch(null);
                       }}
                       className="flex-1 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
                       Cancel
@@ -1200,6 +1253,10 @@ function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRoun
 }
 
 function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate }) {
+  const costPerPlayer = newMatch.courtFee && newMatch.selectedPlayers.length > 0 
+    ? (parseFloat(newMatch.courtFee) / newMatch.selectedPlayers.length).toFixed(2)
+    : '0.00';
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
       <h3 className="font-semibold mb-4">New Match</h3>
@@ -1237,12 +1294,19 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate }) {
               className="w-full px-3 py-2 border rounded-lg text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Court Fee (£)</label>
+            <label className="block text-sm font-medium mb-1">Total Court Fee (£)</label>
             <input type="number" step="0.01" value={newMatch.courtFee}
               onChange={(e) => setNewMatch({ ...newMatch, courtFee: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg text-sm" />
           </div>
         </div>
+
+        {newMatch.courtFee && newMatch.selectedPlayers.length > 0 && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-sm font-semibold text-blue-900">Cost per player: £{costPerPlayer}</div>
+            <div className="text-xs text-blue-700">£{newMatch.courtFee} ÷ {newMatch.selectedPlayers.length} players</div>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium mb-1">Location</label>
@@ -1267,7 +1331,9 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate }) {
                     ...newMatch,
                     selectedPlayers: selected 
                       ? newMatch.selectedPlayers.filter(id => id !== p.id)
-                      : [...newMatch.selectedPlayers, p.id]
+                      : [...newMatch.selectedPlayers, p.id],
+                    // Clear payment organizer if they're deselected
+                    paymentOrganizer: selected && newMatch.paymentOrganizer === p.id ? null : newMatch.paymentOrganizer
                   });
                 }}
                 className={`p-2 text-xs rounded-lg border-2 ${
@@ -1281,8 +1347,37 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate }) {
           </div>
         </div>
 
+        {newMatch.selectedPlayers.length >= 4 && newMatch.courtFee && (
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Who paid for the court? (Others will pay them £{costPerPlayer})
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {newMatch.selectedPlayers.map(playerId => {
+                const player = players.find(p => p.id === playerId);
+                return (
+                  <button
+                    key={playerId}
+                    onClick={() => setNewMatch({ ...newMatch, paymentOrganizer: playerId })}
+                    className={`p-3 rounded-lg border-2 text-sm ${
+                      newMatch.paymentOrganizer === playerId
+                        ? 'border-green-500 bg-green-50 font-semibold'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                    {player?.name}
+                    {newMatch.paymentOrganizer === playerId && ' ✓'}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 This person will be marked as paid, and others will see their payment details
+            </p>
+          </div>
+        )}
+
         <button onClick={onCreate}
-          disabled={newMatch.selectedPlayers.length < 4 || !newMatch.courtFee}
+          disabled={newMatch.selectedPlayers.length < 4 || !newMatch.courtFee || !newMatch.paymentOrganizer}
           className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
           Create Match
         </button>
