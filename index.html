@@ -3,93 +3,874 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Padel Tracker - Auth Test</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Padel Tracker">
+    <meta name="theme-color" content="#4F46E5">
+    <title>Padel Tracker</title>
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 </head>
 <body>
     <div id="root"></div>
-    <script>
-        const firebaseConfig = {
-          apiKey: "AIzaSyDog2f8jYrxm7J19h6QOtTUsuDgiNUmtSU",
-          authDomain: "padel-tracker-uk.firebaseapp.com",
-          projectId: "padel-tracker-uk",
-          storageBucket: "padel-tracker-uk.firebasestorage.app",
-          messagingSenderId: "557326239556",
-          appId: "1:557326239556:web:4bb796309b0eac6697f911"
-        };
+    <script type="text/babel">
+const { useState, useEffect } = React;
 
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+const firebaseConfig = {
+  apiKey: "AIzaSyDog2f8jYrxm7J19h6QOtTUsuDgiNUmtSU",
+  authDomain: "padel-tracker-uk.firebaseapp.com",
+  projectId: "padel-tracker-uk",
+  storageBucket: "padel-tracker-uk.firebasestorage.app",
+  messagingSenderId: "557326239556",
+  appId: "1:557326239556:web:4bb796309b0eac6697f911"
+};
 
-        const ADMIN_EMAILS = ['edavies87@gmail.com'];
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
 
-        auth.onAuthStateChanged((user) => {
-            const root = document.getElementById('root');
-            
-            if (user) {
-                const isAdmin = ADMIN_EMAILS.includes(user.email);
-                root.innerHTML = `
-                    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
-                        <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
-                            <div class="text-6xl mb-4">✅</div>
-                            <h1 class="text-2xl font-bold mb-4">Authentication Working!</h1>
-                            <p class="text-gray-600 mb-2">Signed in as:</p>
-                            <p class="font-semibold mb-4">${user.email}</p>
-                            <p class="text-sm mb-6">
-                                ${isAdmin ? '👑 You are an <strong>ADMIN</strong>' : '👤 You are a <strong>Regular Player</strong>'}
-                            </p>
-                            <button onclick="firebase.auth().signOut()" 
-                                class="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700">
-                                Sign Out
-                            </button>
-                        </div>
-                    </div>
-                `;
-            } else {
-                root.innerHTML = `
-                    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
-                        <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
-                            <div class="text-center mb-8">
-                                <div class="text-6xl mb-4">🎾</div>
-                                <h1 class="text-3xl font-bold text-gray-900 mb-2">Padel Tracker</h1>
-                                <p class="text-gray-600">Authentication Test</p>
-                            </div>
+function Icon({ name }) {
+  useEffect(() => { lucide.createIcons(); });
+  return React.createElement('i', { 'data-lucide': name });
+}
 
-                            <button onclick="signInWithGoogle()" 
-                                class="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 mb-3">
-                                <svg class="w-5 h-5" viewBox="0 0 24 24">
-                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                </svg>
-                                Sign in with Google
-                            </button>
+function App() {
+  const [user, setUser] = useState(null);
+  const [userPlayer, setUserPlayer] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [linkingEmail, setLinkingEmail] = useState(null);
+  
+  const ADMIN_EMAILS = [
+    'edavies87@gmail.com'
+  ];
 
-                            <button onclick="signInWithApple()" 
-                                class="w-full flex items-center justify-center gap-3 bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-900">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                                </svg>
-                                Sign in with Apple
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      setUser(currentUser);
+      
+      if (currentUser) {
+        if (ADMIN_EMAILS.includes(currentUser.email)) {
+          setIsAdmin(true);
+          setUserPlayer(null);
+        } else {
+          const playerSnap = await db.collection('players').where('email', '==', currentUser.email).get();
+          if (!playerSnap.empty) {
+            const playerData = { id: playerSnap.docs[0].id, ...playerSnap.docs[0].data() };
+            setUserPlayer(playerData);
+            setIsAdmin(false);
+          } else {
+            setLinkingEmail(currentUser.email);
+          }
+        }
+      } else {
+        setIsAdmin(false);
+        setUserPlayer(null);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const signInWithGoogle = async () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+      await auth.signInWithPopup(provider);
+    } catch (error) {
+      alert('Sign in failed: ' + error.message);
+    }
+  };
+
+  const signInWithApple = async () => {
+    const provider = new firebase.auth.OAuthProvider('apple.com');
+    try {
+      await auth.signInWithPopup(provider);
+    } catch (error) {
+      alert('Sign in failed: ' + error.message);
+    }
+  };
+
+  const logout = async () => {
+    await auth.signOut();
+    setIsAdmin(false);
+    setUserPlayer(null);
+  };
+
+  const linkPlayerToEmail = async (playerId) => {
+    await db.collection('players').doc(playerId).update({
+      email: user.email,
+      linkedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const playerDoc = await db.collection('players').doc(playerId).get();
+    setUserPlayer({ id: playerId, ...playerDoc.data() });
+    setLinkingEmail(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-6xl">🎾</div>
+      </div>
+    );
+  }
+
+  if (linkingEmail && !isAdmin) {
+    return <LinkPlayerScreen user={user} onLink={linkPlayerToEmail} onLogout={logout} />;
+  }
+
+  if (!user && !isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="text-6xl mb-4">🎾</div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Padel Tracker</h1>
+            <p className="text-gray-600">Sign in to manage your matches</p>
+          </div>
+
+          <div className="space-y-3">
+            <button onClick={signInWithGoogle}
+              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 py-3 rounded-lg hover:bg-gray-50">
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Sign in with Google
+            </button>
+
+            <button onClick={signInWithApple}
+              className="w-full flex items-center justify-center gap-3 bg-black text-white py-3 rounded-lg hover:bg-gray-900">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+              </svg>
+              Sign in with Apple
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <MainApp user={user} userPlayer={userPlayer} isAdmin={isAdmin} onLogout={logout} />;
+}
+
+function LinkPlayerScreen({ user, onLink, onLogout }) {
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    db.collection('players').orderBy('name').get().then(snapshot => {
+      const playerData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPlayers(playerData.filter(p => !p.email));
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-6xl">🎾</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+      <div className="max-w-md mx-auto mt-8">
+        <div className="bg-white rounded-lg shadow-xl p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold">Link Your Account</h2>
+            <button onClick={onLogout} className="text-gray-600 hover:text-gray-900">
+              <Icon name="log-out" />
+            </button>
+          </div>
+          
+          <p className="text-gray-600 mb-4">
+            Signed in as: <strong>{user.email}</strong>
+          </p>
+          <p className="text-sm text-gray-600 mb-6">
+            Select your player profile to link it to this account:
+          </p>
+
+          <div className="space-y-2">
+            {players.map(p => (
+              <button key={p.id} onClick={() => onLink(p.id)}
+                className="w-full p-3 text-left border rounded-lg hover:bg-indigo-50 hover:border-indigo-500">
+                {p.name}
+              </button>
+            ))}
+          </div>
+
+          {players.length === 0 && (
+            <p className="text-center text-gray-500 py-8">
+              No unlinked players found. Contact your admin.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MainApp({ user, userPlayer, isAdmin, onLogout }) {
+  const [view, setView] = useState('matches');
+  const [players, setPlayers] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showNewMatch, setShowNewMatch] = useState(false);
+  const [showNewPlayer, setShowNewPlayer] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState(null);
+  const [playerForm, setPlayerForm] = useState({ name: '', paypalLink: '', revolutLink: '', bankDetails: '', email: '' });
+  const [activeTournament, setActiveTournament] = useState(null);
+  const [showPointsModal, setShowPointsModal] = useState(false);
+  const [pendingTournament, setPendingTournament] = useState(null);
+  const [newMatch, setNewMatch] = useState({
+    date: new Date().toISOString().split('T')[0],
+    time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: []
+  });
+
+  const locs = ['Wrexham Tennis Centre', 'Padel Shed Wrexham', 'Ace Padel Club @ Lion Quays', 'Padel at CNW Golf Academy'];
+
+  useEffect(() => {
+    const unsubPlayers = db.collection('players').orderBy('name').onSnapshot(snapshot => {
+      const playerData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPlayers(playerData);
+      setLoading(false);
+    });
+
+    const unsubMatches = db.collection('matches').orderBy('date', 'desc').onSnapshot(snapshot => {
+      const matchData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMatches(matchData);
+    });
+
+    return () => {
+      unsubPlayers();
+      unsubMatches();
+    };
+  }, []);
+
+  useEffect(() => { lucide.createIcons(); });
+
+  const filteredMatches = isAdmin ? matches : matches.filter(m => 
+    m.players && m.players.some(p => p.id === userPlayer?.id)
+  );
+
+  const addPlayer = async () => {
+    if (playerForm.name.trim()) {
+      await db.collection('players').add({
+        name: playerForm.name.trim(),
+        paypalLink: playerForm.paypalLink.trim(),
+        revolutLink: playerForm.revolutLink.trim(),
+        bankDetails: playerForm.bankDetails.trim(),
+        email: playerForm.email.trim(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      setPlayerForm({ name: '', paypalLink: '', revolutLink: '', bankDetails: '', email: '' });
+      setShowNewPlayer(false);
+    }
+  };
+
+  const updatePlayer = async () => {
+    if (editingPlayer && playerForm.name.trim()) {
+      await db.collection('players').doc(editingPlayer).update({
+        name: playerForm.name.trim(),
+        paypalLink: playerForm.paypalLink.trim(),
+        revolutLink: playerForm.revolutLink.trim(),
+        bankDetails: playerForm.bankDetails.trim(),
+        email: playerForm.email.trim()
+      });
+      setEditingPlayer(null);
+      setPlayerForm({ name: '', paypalLink: '', revolutLink: '', bankDetails: '', email: '' });
+    }
+  };
+
+  const createMatch = async () => {
+    if (newMatch.selectedPlayers.length >= 4 && newMatch.courtFee) {
+      await db.collection('matches').add({
+        ...newMatch,
+        courtFee: parseFloat(newMatch.courtFee),
+        players: newMatch.selectedPlayers.map(id => {
+          const player = players.find(p => p.id === id);
+          return { id, name: player.name, paid: false };
+        }),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      setNewMatch({
+        date: new Date().toISOString().split('T')[0],
+        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: []
+      });
+      setShowNewMatch(false);
+    }
+  };
+
+  const togglePayment = async (matchId, playerId) => {
+    if (!isAdmin && userPlayer?.id !== playerId) {
+      alert('You can only mark yourself as paid');
+      return;
+    }
+    
+    const match = matches.find(m => m.id === matchId);
+    const updatedPlayers = match.players.map(p => 
+      p.id === playerId ? { ...p, paid: !p.paid } : p
+    );
+    await db.collection('matches').doc(matchId).update({ players: updatedPlayers });
+  };
+
+  const deleteMatch = async (matchId) => {
+    if (!isAdmin) {
+      alert('Only admins can delete matches');
+      return;
+    }
+    await db.collection('matches').doc(matchId).delete();
+  };
+
+  const showTournamentPointsDialog = (match) => {
+    setPendingTournament(match);
+    setShowPointsModal(true);
+  };
+
+  const startTournamentWithPoints = async (targetPoints) => {
+    if (!pendingTournament) return;
+    
+    const match = pendingTournament;
+    const playerIds = match.players.map(p => p.id);
+    const n = playerIds.length;
+    if (n < 4 || n % 2 !== 0) return;
+
+    const rounds = [];
+    const numRounds = n - 1;
+    const courts = match.courts || 1;
+
+    for (let round = 0; round < numRounds; round++) {
+      const roundMatches = [];
+      const used = new Set();
+      
+      for (let i = 0; i < Math.floor(n / 4); i++) {
+        const available = playerIds.filter(id => !used.has(id));
+        if (available.length >= 4) {
+          roundMatches.push({
+            court: (i % courts) + 1,
+            team1: [available[0], available[1]],
+            team2: [available[2], available[3]],
+            score: { team1: '', team2: '' }
+          });
+          available.slice(0, 4).forEach(id => used.add(id));
+        }
+      }
+      
+      rounds.push({ number: round + 1, matches: roundMatches });
+      
+      if (playerIds.length > 1) {
+        const first = playerIds.shift();
+        playerIds.splice(1, 0, first);
+      }
+    }
+
+    await db.collection('matches').doc(match.id).update({
+      tournamentStarted: true,
+      tournamentRounds: rounds,
+      tournamentPlayers: match.players.map(p => ({ ...p, points: 0, gamesWon: 0 })),
+      targetPoints: targetPoints
+    });
+    setActiveTournament(match.id);
+    setShowPointsModal(false);
+    setPendingTournament(null);
+  };
+
+  const updateTournamentScore = async (matchId, roundIdx, matchIdx, team, value) => {
+    const match = matches.find(m => m.id === matchId);
+    if (!match || !match.tournamentRounds) return;
+
+    const newRounds = [...match.tournamentRounds];
+    newRounds[roundIdx].matches[matchIdx].score[team] = value;
+
+    const playerPoints = {};
+    match.tournamentPlayers.forEach(p => {
+      playerPoints[p.id] = { points: 0, gamesWon: 0 };
+    });
+
+    newRounds.forEach(round => {
+      round.matches.forEach(m => {
+        const s1 = parseInt(m.score.team1) || 0;
+        const s2 = parseInt(m.score.team2) || 0;
+        
+        m.team1.forEach(pid => {
+          playerPoints[pid].points += s1;
+          if (s1 > s2) playerPoints[pid].gamesWon++;
         });
+        
+        m.team2.forEach(pid => {
+          playerPoints[pid].points += s2;
+          if (s2 > s1) playerPoints[pid].gamesWon++;
+        });
+      });
+    });
 
-        function signInWithGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(err => alert('Error: ' + err.message));
-        }
+    const updatedPlayers = match.tournamentPlayers.map(p => ({
+      ...p,
+      points: playerPoints[p.id].points,
+      gamesWon: playerPoints[p.id].gamesWon
+    }));
 
-        function signInWithApple() {
-            const provider = new firebase.auth.OAuthProvider('apple.com');
-            auth.signInWithPopup(provider).catch(err => alert('Error: ' + err.message));
-        }
+    await db.collection('matches').doc(matchId).update({
+      tournamentRounds: newRounds,
+      tournamentPlayers: updatedPlayers
+    });
+  };
+
+  const totalRev = matches.reduce((s, m) => s + m.courtFee, 0);
+  const totalCol = matches.reduce((s, m) => {
+    const paid = m.players.filter(p => p.paid).length;
+    return s + (m.courtFee / m.players.length) * paid;
+  }, 0);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-6xl">🎾</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      {/* Points Selection Modal */}
+      {showPointsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-xl font-bold mb-4">Select Target Points</h3>
+            <p className="text-gray-600 mb-6">How many points should each player play to?</p>
+            
+            <div className="space-y-3">
+              <button 
+                onClick={() => startTournamentWithPoints(16)}
+                className="w-full py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-lg">
+                16 Points
+                <span className="block text-sm font-normal opacity-90">(Shorter game)</span>
+              </button>
+              
+              <button 
+                onClick={() => startTournamentWithPoints(32)}
+                className="w-full py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold text-lg">
+                32 Points
+                <span className="block text-sm font-normal opacity-90">(Standard game)</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  setShowPointsModal(false);
+                  setPendingTournament(null);
+                }}
+                className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">Padel Tracker</h1>
+            <p className="text-sm text-gray-600">
+              {isAdmin ? '👑 Admin' : `👤 ${userPlayer?.name}`}
+            </p>
+          </div>
+          <button onClick={onLogout} className="text-gray-600 hover:text-gray-900">
+            <Icon name="log-out" />
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="bg-white rounded-lg shadow-sm p-1 grid grid-cols-4 gap-1">
+          {['matches', 'stats', 'admin', 'players'].map(tab => (
+            <button key={tab} onClick={() => setView(tab)}
+              className={`py-2 px-2 rounded-md text-xs font-medium ${
+                view === tab ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+              }`}>
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 pb-24">
+        {view === 'matches' && (
+          <div className="space-y-4">
+            {filteredMatches.length === 0 && (
+              <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+                <div className="text-6xl mb-4">📅</div>
+                <p className="text-gray-600">{isAdmin ? 'No matches yet' : 'No matches for you yet'}</p>
+              </div>
+            )}
+
+            {filteredMatches.map(m => {
+              const paidCnt = m.players.filter(p => p.paid).length;
+              const allPaid = paidCnt === m.players.length;
+              const mDate = new Date(m.date + ' ' + (m.time || '00:00'));
+              const isUp = mDate >= new Date();
+              const isTournament = m.format === 'americano' || m.format === 'mexicano';
+              const tournamentActive = activeTournament === m.id;
+              const canEdit = isAdmin;
+              
+              return (
+                <div key={m.id} className="bg-white rounded-lg shadow-sm p-4">
+                  <div className="flex justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold">{m.courts} Court{m.courts > 1 ? 's' : ''}</h3>
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                          m.format === 'open' ? 'bg-blue-100 text-blue-700' :
+                          m.format === 'americano' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
+                        }`}>{m.format === 'open' ? 'Open' : m.format === 'americano' ? 'Americano' : 'Mexicano'}</span>
+                        {m.targetPoints && (
+                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">
+                            Target: {m.targetPoints}pts
+                          </span>
+                        )}
+                        {isUp && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">Upcoming</span>}
+                      </div>
+                      <p className="text-sm text-gray-600">{new Date(m.date).toLocaleDateString('en-GB')} {m.time && `at ${m.time}`}</p>
+                      {m.location && <p className="text-xs text-gray-500">📍 {m.location}</p>}
+                      <p className="text-xs text-gray-500 mt-1">{m.players.map(p => p.name).join(', ')}</p>
+                    </div>
+                    {canEdit && (
+                      <button onClick={() => deleteMatch(m.id)} className="text-gray-400 hover:text-red-500">
+                        <Icon name="trash-2" />
+                      </button>
+                    )}
+                  </div>
+
+                  {!isUp && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {m.players.map(p => {
+                        const playerInfo = players.find(pl => pl.id === p.id);
+                        const canPay = isAdmin || userPlayer?.id === p.id;
+                        return (
+                          <div key={p.id} className="border rounded-lg p-2">
+                            <div onClick={() => canPay && togglePayment(m.id, p.id)}
+                              className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
+                              <span className="text-sm">{p.name}</span>
+                              {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
+                            </div>
+                            {!p.paid && playerInfo && userPlayer?.id === p.id && (
+                              <div className="mt-2 pt-2 border-t flex gap-1 flex-wrap">
+                                {playerInfo.paypalLink && (
+                                  <a href={playerInfo.paypalLink} target="_blank" rel="noopener noreferrer"
+                                    className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">PayPal</a>
+                                )}
+                                {playerInfo.revolutLink && (
+                                  <a href={playerInfo.revolutLink} target="_blank" rel="noopener noreferrer"
+                                    className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded">Revolut</a>
+                                )}
+                                {playerInfo.bankDetails && (
+                                  <button onClick={() => { navigator.clipboard.writeText(playerInfo.bankDetails); alert('Copied!'); }}
+                                    className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Bank</button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {isTournament && !m.tournamentStarted && canEdit && (
+                    <button onClick={() => showTournamentPointsDialog(m)}
+                      className="w-full mt-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center justify-center gap-2">
+                      <Icon name="trophy" />
+                      Start Tournament
+                    </button>
+                  )}
+
+                  {/* Tournament Leaderboard */}
+                  {m.tournamentStarted && m.tournamentPlayers && (
+                    <div className="mt-4 border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold">Leaderboard</h4>
+                        {m.targetPoints && (
+                          <span className="text-xs text-gray-500">Target: {m.targetPoints} pts</span>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {[...m.tournamentPlayers].sort((a, b) => {
+                          if (b.points !== a.points) return b.points - a.points;
+                          return b.gamesWon - a.gamesWon;
+                        }).map((p, idx) => {
+                          const isWinner = m.targetPoints && p.points >= m.targetPoints;
+                          return (
+                            <div key={p.id} className={`flex items-center justify-between p-2 rounded ${
+                              isWinner ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50'
+                            }`}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-400 w-6">#{idx + 1}</span>
+                                <span className="font-medium">{p.name}</span>
+                                {isWinner && <span className="text-yellow-600">👑</span>}
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-indigo-600">{p.points} pts</div>
+                                <div className="text-xs text-gray-500">{p.gamesWon} wins</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {isAdmin && (
+              <button onClick={() => setShowNewMatch(!showNewMatch)}
+                className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2">
+                <Icon name={showNewMatch ? "x" : "plus"} />
+                {showNewMatch ? 'Cancel' : 'New Match'}
+              </button>
+            )}
+
+            {isAdmin && showNewMatch && (
+              <div className="bg-white rounded-lg shadow-sm p-4">
+                <h3 className="font-semibold mb-4">New Match</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Date</label>
+                      <input type="date" value={newMatch.date} onChange={(e) => setNewMatch({ ...newMatch, date: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Time</label>
+                      <input type="time" value={newMatch.time} onChange={(e) => setNewMatch({ ...newMatch, time: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Format</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['open', 'americano', 'mexicano'].map(f => (
+                        <button key={f} onClick={() => setNewMatch({ ...newMatch, format: f })}
+                          className={`p-2 rounded-lg border-2 text-xs ${newMatch.format === f ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
+                          {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Courts</label>
+                      <input type="number" min="1" value={newMatch.courts} 
+                        onChange={(e) => setNewMatch({ ...newMatch, courts: parseInt(e.target.value) || 1 })}
+                        className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Court Fee (£)</label>
+                      <input type="number" step="0.01" value={newMatch.courtFee}
+                        onChange={(e) => setNewMatch({ ...newMatch, courtFee: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Location</label>
+                    <select value={newMatch.location} 
+                      onChange={(e) => setNewMatch({ ...newMatch, location: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm">
+                      <option value="">Select location...</option>
+                      {locs.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Players ({newMatch.selectedPlayers.length} selected)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                      {players.map(p => (
+                        <button key={p.id}
+                          onClick={() => {
+                            const selected = newMatch.selectedPlayers.includes(p.id);
+                            setNewMatch({
+                              ...newMatch,
+                              selectedPlayers: selected 
+                                ? newMatch.selectedPlayers.filter(id => id !== p.id)
+                                : [...newMatch.selectedPlayers, p.id]
+                            });
+                          }}
+                          className={`p-2 text-xs rounded-lg border-2 ${
+                            newMatch.selectedPlayers.includes(p.id) 
+                              ? 'border-indigo-500 bg-indigo-50' 
+                              : 'border-gray-200'
+                          }`}>
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button onClick={createMatch}
+                    disabled={newMatch.selectedPlayers.length < 4 || !newMatch.courtFee}
+                    className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                    Create Match
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {view === 'stats' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-bold mb-4">Statistics</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">£{totalRev.toFixed(2)}</div>
+                <div className="text-sm text-gray-600">Total Revenue</div>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">£{totalCol.toFixed(2)}</div>
+                <div className="text-sm text-gray-600">Collected</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {view === 'players' && (
+          <div className="space-y-4">
+            {players.map(p => (
+              <div key={p.id} className="bg-white rounded-lg shadow-sm p-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{p.name}</h3>
+                    {p.email && <p className="text-xs text-gray-500">📧 {p.email}</p>}
+                  </div>
+                  {isAdmin && (
+                    <button onClick={() => {
+                      setEditingPlayer(p.id);
+                      setPlayerForm({
+                        name: p.name,
+                        paypalLink: p.paypalLink || '',
+                        revolutLink: p.revolutLink || '',
+                        bankDetails: p.bankDetails || '',
+                        email: p.email || ''
+                      });
+                    }} className="text-indigo-600 hover:text-indigo-800">
+                      <Icon name="edit" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {isAdmin && (
+              <button onClick={() => setShowNewPlayer(!showNewPlayer)}
+                className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                {showNewPlayer ? 'Cancel' : 'Add Player'}
+              </button>
+            )}
+
+            {isAdmin && showNewPlayer && (
+              <div className="bg-white rounded-lg shadow-sm p-4">
+                <h3 className="font-semibold mb-4">New Player</h3>
+                <div className="space-y-3">
+                  <input type="text" placeholder="Name" value={playerForm.name}
+                    onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg" />
+                  <input type="email" placeholder="Email (optional)" value={playerForm.email}
+                    onChange={(e) => setPlayerForm({ ...playerForm, email: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg" />
+                  <input type="url" placeholder="PayPal Link" value={playerForm.paypalLink}
+                    onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg" />
+                  <input type="url" placeholder="Revolut Link" value={playerForm.revolutLink}
+                    onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg" />
+                  <input type="text" placeholder="Bank Details" value={playerForm.bankDetails}
+                    onChange={(e) => setPlayerForm({ ...playerForm, bankDetails: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg" />
+                  <button onClick={addPlayer} className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    Add Player
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {editingPlayer && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                  <h3 className="font-semibold mb-4">Edit Player</h3>
+                  <div className="space-y-3">
+                    <input type="text" placeholder="Name" value={playerForm.name}
+                      onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg" />
+                    <input type="email" placeholder="Email (optional)" value={playerForm.email}
+                      onChange={(e) => setPlayerForm({ ...playerForm, email: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg" />
+                    <input type="url" placeholder="PayPal Link" value={playerForm.paypalLink}
+                      onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg" />
+                    <input type="url" placeholder="Revolut Link" value={playerForm.revolutLink}
+                      onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg" />
+                    <input type="text" placeholder="Bank Details" value={playerForm.bankDetails}
+                      onChange={(e) => setPlayerForm({ ...playerForm, bankDetails: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg" />
+                    <div className="flex gap-2">
+                      <button onClick={updatePlayer} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        Save
+                      </button>
+                      <button onClick={() => {
+                        setEditingPlayer(null);
+                        setPlayerForm({ name: '', paypalLink: '', revolutLink: '', bankDetails: '', email: '' });
+                      }} className="flex-1 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {view === 'admin' && isAdmin && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-bold mb-4">Admin Panel</h2>
+            <div className="space-y-4">
+              <div className="p-4 border rounded-lg">
+                <h3 className="font-semibold mb-2">Quick Stats</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>Total Players: <strong>{players.length}</strong></div>
+                  <div>Total Matches: <strong>{matches.length}</strong></div>
+                  <div>Revenue: <strong>£{totalRev.toFixed(2)}</strong></div>
+                  <div>Collected: <strong>£{totalCol.toFixed(2)}</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
 </html>
