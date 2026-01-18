@@ -471,7 +471,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   const [pendingTournament, setPendingTournament] = useState(null);
   const [newMatch, setNewMatch] = useState({
     date: new Date().toISOString().split('T')[0],
-    time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null
+    time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4
   });
 
   const locs = ['Wrexham Tennis Centre', 'Padel Shed Wrexham', 'Ace Padel Club @ Lion Quays', 'Padel at CNW Golf Academy'];
@@ -532,6 +532,33 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   };
 
   const createMatch = async () => {
+    // For open registration matches
+    if (newMatch.openRegistration && newMatch.courtFee) {
+      const matchData = {
+        ...newMatch,
+        courtFee: parseFloat(newMatch.courtFee),
+        players: [],
+        openRegistration: true,
+        maxPlayers: newMatch.maxPlayers,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      const docRef = await db.collection('matches').add(matchData);
+      
+      // Show shareable link
+      const shareUrl = `${window.location.origin}${window.location.pathname}?match=${docRef.id}`;
+      alert(`Match created! Share this link:\n${shareUrl}\n\nClick OK to copy to clipboard.`);
+      navigator.clipboard.writeText(shareUrl);
+      
+      setNewMatch({
+        date: new Date().toISOString().split('T')[0],
+        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4
+      });
+      setShowNewMatch(false);
+      return;
+    }
+    
+    // For regular matches with selected players
     if (newMatch.selectedPlayers.length >= 4 && newMatch.courtFee) {
       const costPerPlayer = parseFloat(newMatch.courtFee) / newMatch.selectedPlayers.length;
       
@@ -544,15 +571,16 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
           return { 
             id, 
             name: player.name, 
-            paid: id === newMatch.paymentOrganizer // Organizer marked as paid
+            paid: id === newMatch.paymentOrganizer
           };
         }),
+        openRegistration: false,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
       setNewMatch({
         date: new Date().toISOString().split('T')[0],
-        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null
+        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4
       });
       setShowNewMatch(false);
     }
@@ -569,6 +597,54 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
       p.id === playerId ? { ...p, paid: !p.paid } : p
     );
     await db.collection('matches').doc(matchId).update({ players: updatedPlayers });
+  };
+
+  const joinMatch = async (matchId) => {
+    if (!userPlayer) {
+      alert('Please sign in to join this match');
+      return;
+    }
+
+    const match = matches.find(m => m.id === matchId);
+    
+    if (match.players.length >= match.maxPlayers) {
+      alert('This match is full');
+      return;
+    }
+
+    if (match.players.some(p => p.id === userPlayer.id)) {
+      alert('You have already joined this match');
+      return;
+    }
+
+    const updatedPlayers = [...match.players, { 
+      id: userPlayer.id, 
+      name: userPlayer.name, 
+      paid: false 
+    }];
+
+    // Recalculate cost per player
+    const costPerPlayer = match.courtFee / updatedPlayers.length;
+
+    await db.collection('matches').doc(matchId).update({ 
+      players: updatedPlayers,
+      costPerPlayer: costPerPlayer
+    });
+  };
+
+  const leaveMatch = async (matchId) => {
+    if (!userPlayer) return;
+
+    const match = matches.find(m => m.id === matchId);
+    const updatedPlayers = match.players.filter(p => p.id !== userPlayer.id);
+
+    // Recalculate cost per player
+    const costPerPlayer = updatedPlayers.length > 0 ? match.courtFee / updatedPlayers.length : 0;
+
+    await db.collection('matches').doc(matchId).update({ 
+      players: updatedPlayers,
+      costPerPlayer: costPerPlayer
+    });
   };
 
   const deleteMatch = async (matchId) => {
@@ -796,6 +872,8 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
                   userPlayer={userPlayer}
                   onDelete={deleteMatch}
                   onTogglePayment={togglePayment}
+                  onJoinMatch={joinMatch}
+                  onLeaveMatch={leaveMatch}
                   onStartTournament={showTournamentPointsDialog}
                   onUpdateScore={updateMatchScore}
                   onCompleteRound={completeRound}
@@ -950,7 +1028,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   );
 }
 
-function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePayment, onStartTournament, onUpdateScore, onCompleteRound }) {
+function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePayment, onJoinMatch, onLeaveMatch, onStartTournament, onUpdateScore, onCompleteRound }) {
   const [showScoreInput, setShowScoreInput] = useState(false);
   const [matchScores, setMatchScores] = useState(match.matchScores || [
     { team1: '', team2: '' },
@@ -960,11 +1038,22 @@ function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePaym
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [startTime, setStartTime] = useState(match.startTime || '');
   const [endTime, setEndTime] = useState(match.endTime || '');
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const mDate = new Date(match.date + ' ' + (match.time || '00:00'));
   const isUp = mDate >= new Date();
   const isTournament = match.format === 'americano' || match.format === 'mexicano';
   const canEdit = isAdmin;
+  const isOpenRegistration = match.openRegistration;
+  const hasJoined = match.players?.some(p => p.id === userPlayer?.id);
+  const isFull = match.players?.length >= match.maxPlayers;
+
+  const shareMatch = () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?match=${match.id}`;
+    navigator.clipboard.writeText(shareUrl);
+    setShowShareModal(true);
+    setTimeout(() => setShowShareModal(false), 3000);
+  };
 
   const saveMatchScores = async () => {
     await db.collection('matches').doc(match.id).update({
@@ -991,6 +1080,12 @@ function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePaym
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
+      {showShareModal && (
+        <div className="mb-3 p-2 bg-green-100 text-green-800 rounded text-sm text-center">
+          ✓ Link copied to clipboard!
+        </div>
+      )}
+
       <div className="flex justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -999,6 +1094,11 @@ function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePaym
               match.format === 'open' ? 'bg-blue-100 text-blue-700' :
               match.format === 'americano' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
             }`}>{match.format === 'open' ? 'Open' : match.format === 'americano' ? 'Americano' : 'Mexicano'}</span>
+            {isOpenRegistration && (
+              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">
+                Open Sign-Up {match.players?.length || 0}/{match.maxPlayers}
+              </span>
+            )}
             {isUp && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">Upcoming</span>}
           </div>
           <p className="text-sm text-gray-600">{new Date(match.date).toLocaleDateString('en-GB')} {match.time && `at ${match.time}`}</p>
@@ -1006,9 +1106,17 @@ function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePaym
           {match.startTime && match.endTime && (
             <p className="text-xs text-gray-500">⏱️ {match.startTime} - {match.endTime}</p>
           )}
-          <p className="text-xs text-gray-500 mt-1">{(match.players || []).map(p => p.name).join(', ')}</p>
+          {!isOpenRegistration && <p className="text-xs text-gray-500 mt-1">{(match.players || []).map(p => p.name).join(', ')}</p>}
         </div>
         <div className="flex gap-2">
+          {isOpenRegistration && canEdit && (
+            <button 
+              onClick={shareMatch}
+              className="text-gray-600 hover:text-blue-600"
+              title="Share match link">
+              <Icon name="share-2" />
+            </button>
+          )}
           {!isUp && canEdit && !isTournament && (
             <>
               <button 
@@ -1033,7 +1141,68 @@ function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePaym
         </div>
       </div>
 
-      {!isUp && !isTournament && (
+      {!isUp && !isTournament && isOpenRegistration && (
+        <div className="space-y-3">
+          {/* Join/Leave buttons */}
+          {userPlayer && isUp && (
+            <div className="flex gap-2">
+              {!hasJoined ? (
+                <button
+                  onClick={() => onJoinMatch(match.id)}
+                  disabled={isFull}
+                  className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
+                  {isFull ? 'Match Full' : 'Join Match'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => onLeaveMatch(match.id)}
+                  className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold">
+                  Leave Match
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Players list */}
+          {match.costPerPlayer && match.players && match.players.length > 0 && (
+            <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-center">
+              <span className="text-sm font-semibold text-yellow-900">£{match.costPerPlayer.toFixed(2)} per player</span>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold">
+              Players ({match.players?.length || 0}/{match.maxPlayers})
+            </h4>
+            {match.players && match.players.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {match.players.map(p => {
+                  const playerInfo = players.find(pl => pl.id === p.id);
+                  const canPay = isAdmin || userPlayer?.id === p.id;
+                  const isOrganizer = p.id === match.paymentOrganizer;
+                  
+                  return (
+                    <div key={p.id} className={`border-2 rounded-lg p-2 ${isOrganizer ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
+                      <div onClick={() => canPay && onTogglePayment(match.id, p.id)}
+                        className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
+                        <div>
+                          <span className="text-sm font-medium">{p.name}</span>
+                          {isOrganizer && <span className="ml-1 text-xs text-green-700">💰</span>}
+                        </div>
+                        {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-4">No players yet. Be the first to join!</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!isUp && !isTournament && !isOpenRegistration && (
         <div className="space-y-3">
           {match.costPerPlayer && (
             <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-center">
@@ -1563,6 +1732,44 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate }) {
           </div>
         </div>
 
+        <div>
+          <label className="block text-sm font-medium mb-2">Match Type</label>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <button 
+              onClick={() => setNewMatch({ ...newMatch, openRegistration: false })}
+              className={`p-3 rounded-lg border-2 text-sm ${!newMatch.openRegistration ? 'border-indigo-500 bg-indigo-50 font-semibold' : 'border-gray-200'}`}>
+              <div className="font-medium">Fixed Players</div>
+              <div className="text-xs text-gray-500">Select players now</div>
+            </button>
+            <button 
+              onClick={() => setNewMatch({ ...newMatch, openRegistration: true, selectedPlayers: [], paymentOrganizer: null })}
+              className={`p-3 rounded-lg border-2 text-sm ${newMatch.openRegistration ? 'border-orange-500 bg-orange-50 font-semibold' : 'border-gray-200'}`}>
+              <div className="font-medium">Open Sign-Up</div>
+              <div className="text-xs text-gray-500">Players join later</div>
+            </button>
+          </div>
+          {newMatch.openRegistration && (
+            <div className="p-3 bg-orange-50 border border-orange-200 rounded text-sm">
+              <p className="font-medium text-orange-900 mb-1">📢 Open Registration Mode</p>
+              <p className="text-xs text-orange-700">You'll get a shareable link that players can use to sign themselves up.</p>
+            </div>
+          )}
+        </div>
+
+        {newMatch.openRegistration && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Max Players</label>
+            <input 
+              type="number" 
+              min="4" 
+              max="16" 
+              value={newMatch.maxPlayers} 
+              onChange={(e) => setNewMatch({ ...newMatch, maxPlayers: parseInt(e.target.value) || 4 })}
+              className="w-full px-3 py-2 border rounded-lg text-sm" 
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium mb-1">Courts</label>
@@ -1595,68 +1802,76 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate }) {
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Players ({newMatch.selectedPlayers.length} selected)
-          </label>
-          <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-            {players.map(p => (
-              <button key={p.id}
-                onClick={() => {
-                  const selected = newMatch.selectedPlayers.includes(p.id);
-                  setNewMatch({
-                    ...newMatch,
-                    selectedPlayers: selected 
-                      ? newMatch.selectedPlayers.filter(id => id !== p.id)
-                      : [...newMatch.selectedPlayers, p.id],
-                    // Clear payment organizer if they're deselected
-                    paymentOrganizer: selected && newMatch.paymentOrganizer === p.id ? null : newMatch.paymentOrganizer
-                  });
-                }}
-                className={`p-2 text-xs rounded-lg border-2 ${
-                  newMatch.selectedPlayers.includes(p.id) 
-                    ? 'border-indigo-500 bg-indigo-50' 
-                    : 'border-gray-200'
-                }`}>
-                {p.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {newMatch.selectedPlayers.length >= 4 && newMatch.courtFee && (
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Who paid for the court? (Others will pay them £{costPerPlayer})
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {newMatch.selectedPlayers.map(playerId => {
-                const player = players.find(p => p.id === playerId);
-                return (
-                  <button
-                    key={playerId}
-                    onClick={() => setNewMatch({ ...newMatch, paymentOrganizer: playerId })}
-                    className={`p-3 rounded-lg border-2 text-sm ${
-                      newMatch.paymentOrganizer === playerId
-                        ? 'border-green-500 bg-green-50 font-semibold'
-                        : 'border-gray-200 hover:border-gray-300'
+        {!newMatch.openRegistration && (
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Players ({newMatch.selectedPlayers.length} selected)
+              </label>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                {players.map(p => (
+                  <button key={p.id}
+                    onClick={() => {
+                      const selected = newMatch.selectedPlayers.includes(p.id);
+                      setNewMatch({
+                        ...newMatch,
+                        selectedPlayers: selected 
+                          ? newMatch.selectedPlayers.filter(id => id !== p.id)
+                          : [...newMatch.selectedPlayers, p.id],
+                        // Clear payment organizer if they're deselected
+                        paymentOrganizer: selected && newMatch.paymentOrganizer === p.id ? null : newMatch.paymentOrganizer
+                      });
+                    }}
+                    className={`p-2 text-xs rounded-lg border-2 ${
+                      newMatch.selectedPlayers.includes(p.id) 
+                        ? 'border-indigo-500 bg-indigo-50' 
+                        : 'border-gray-200'
                     }`}>
-                    {player?.name}
-                    {newMatch.paymentOrganizer === playerId && ' ✓'}
+                    {p.name}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              💡 This person will be marked as paid, and others will see their payment details
-            </p>
-          </div>
+
+            {newMatch.selectedPlayers.length >= 4 && newMatch.courtFee && (
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Who paid for the court? (Others will pay them £{costPerPlayer})
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {newMatch.selectedPlayers.map(playerId => {
+                    const player = players.find(p => p.id === playerId);
+                    return (
+                      <button
+                        key={playerId}
+                        onClick={() => setNewMatch({ ...newMatch, paymentOrganizer: playerId })}
+                        className={`p-3 rounded-lg border-2 text-sm ${
+                          newMatch.paymentOrganizer === playerId
+                            ? 'border-green-500 bg-green-50 font-semibold'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}>
+                        {player?.name}
+                        {newMatch.paymentOrganizer === playerId && ' ✓'}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 This person will be marked as paid, and others will see their payment details
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         <button onClick={onCreate}
-          disabled={newMatch.selectedPlayers.length < 4 || !newMatch.courtFee || !newMatch.paymentOrganizer}
+          disabled={
+            newMatch.openRegistration 
+              ? !newMatch.courtFee
+              : (newMatch.selectedPlayers.length < 4 || !newMatch.courtFee || !newMatch.paymentOrganizer)
+          }
           className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
-          Create Match
+          {newMatch.openRegistration ? 'Create & Get Link' : 'Create Match'}
         </button>
       </div>
     </div>
