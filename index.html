@@ -7,8 +7,6 @@
     <meta name="apple-mobile-web-app-title" content="Padel Tracker">
     <meta name="theme-color" content="#4F46E5">
     <title>Padel Tracker</title>
-    <link rel="manifest" href="./manifest.json">
-    <link rel="apple-touch-icon" href="./icon-192.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -41,7 +39,7 @@ function Icon({ name }) {
   return React.createElement('i', { 'data-lucide': name });
 }
 
-// Tournament Pairing Algorithms
+// Tournament Algorithms
 function generateAmericanoPairings(playerIds, numCourts) {
   const n = playerIds.length;
   if (n < 4 || n % 2 !== 0) return null;
@@ -297,7 +295,6 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   const [playerForm, setPlayerForm] = useState({ name: '', paypalLink: '', revolutLink: '', bankDetails: '', email: '' });
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [pendingTournament, setPendingTournament] = useState(null);
-  const [showScoreInput, setShowScoreInput] = useState(null);
   const [newMatch, setNewMatch] = useState({
     date: new Date().toISOString().split('T')[0],
     time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: []
@@ -416,7 +413,6 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
     if (match.format === 'americano') {
       rounds = generateAmericanoPairings(playerIds, match.courts);
     } else {
-      // Mexicano - generate first round
       const firstRound = generateMexicanoRound(playerIds, match.courts, null);
       rounds = [{ number: 1, matches: firstRound, completed: false }];
     }
@@ -431,56 +427,74 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
       tournamentRounds: rounds,
       tournamentPlayers: match.players.map(p => ({ ...p, points: 0, gamesWon: 0 })),
       targetPoints: targetPoints,
-      currentRound: 1
+      currentRoundNumber: 1
     });
     
     setShowPointsModal(false);
     setPendingTournament(null);
   };
 
-  const calculatePlayerPoints = (rounds) => {
-    const playerPoints = {};
+  const updateMatchScore = async (matchId, roundIdx, matchIdx, team, value) => {
+    const match = matches.find(m => m.id === matchId);
+    const newRounds = [...match.tournamentRounds];
+    newRounds[roundIdx].matches[matchIdx].score[team] = value;
     
-    rounds.forEach(round => {
-      if (!round.completed) return;
+    await db.collection('matches').doc(matchId).update({
+      tournamentRounds: newRounds
+    });
+  };
+
+  const completeRound = async (matchId, roundIdx) => {
+    const match = matches.find(m => m.id === matchId);
+    const newRounds = [...match.tournamentRounds];
+    
+    // Check all scores are filled
+    const allScored = newRounds[roundIdx].matches.every(m => m.score.team1 && m.score.team2);
+    if (!allScored) {
+      alert('Please enter all scores for this round');
+      return;
+    }
+
+    newRounds[roundIdx].completed = true;
+
+    // Calculate points
+    const playerPoints = {};
+    match.tournamentPlayers.forEach(p => {
+      playerPoints[p.id] = { points: 0, gamesWon: 0 };
+    });
+
+    newRounds.forEach(round => {
+      if (!round.completed && round.number !== roundIdx + 1) return;
       
       round.matches.forEach(m => {
         const s1 = parseInt(m.score.team1) || 0;
         const s2 = parseInt(m.score.team2) || 0;
         
         m.team1.forEach(pid => {
-          if (!playerPoints[pid]) playerPoints[pid] = { points: 0, gamesWon: 0 };
           playerPoints[pid].points += s1;
           if (s1 > s2) playerPoints[pid].gamesWon++;
         });
         
         m.team2.forEach(pid => {
-          if (!playerPoints[pid]) playerPoints[pid] = { points: 0, gamesWon: 0 };
           playerPoints[pid].points += s2;
           if (s2 > s1) playerPoints[pid].gamesWon++;
         });
       });
     });
-    
-    return playerPoints;
-  };
 
-  const saveRoundScores = async (matchId, roundIndex) => {
-    const match = matches.find(m => m.id === matchId);
-    if (!match) return;
-
-    const newRounds = [...match.tournamentRounds];
-    newRounds[roundIndex].completed = true;
-
-    const playerPoints = calculatePlayerPoints(newRounds);
     const updatedPlayers = match.tournamentPlayers.map(p => ({
       ...p,
-      points: playerPoints[p.id]?.points || 0,
-      gamesWon: playerPoints[p.id]?.gamesWon || 0
+      points: playerPoints[p.id].points,
+      gamesWon: playerPoints[p.id].gamesWon
     }));
 
-    // For Mexicano, generate next round based on current standings
-    if (match.format === 'mexicano' && roundIndex === match.currentRound - 1) {
+    const updateData = {
+      tournamentRounds: newRounds,
+      tournamentPlayers: updatedPlayers
+    };
+
+    // For Mexicano, generate next round
+    if (match.format === 'mexicano' && roundIdx + 1 < 10) {
       const nextRound = generateMexicanoRound(
         match.players.map(p => p.id),
         match.courts,
@@ -489,20 +503,18 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
       
       if (nextRound) {
         newRounds.push({
-          number: roundIndex + 2,
+          number: roundIdx + 2,
           matches: nextRound,
           completed: false
         });
+        updateData.tournamentRounds = newRounds;
+        updateData.currentRoundNumber = roundIdx + 2;
       }
+    } else if (match.format === 'americano') {
+      updateData.currentRoundNumber = roundIdx + 2;
     }
 
-    await db.collection('matches').doc(matchId).update({
-      tournamentRounds: newRounds,
-      tournamentPlayers: updatedPlayers,
-      currentRound: match.currentRound + (match.format === 'mexicano' ? 1 : 0)
-    });
-
-    setShowScoreInput(null);
+    await db.collection('matches').doc(matchId).update(updateData);
   };
 
   const totalRev = matches.reduce((s, m) => s + (m.courtFee || 0), 0);
@@ -521,11 +533,10 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      {/* Points Selection Modal */}
       {showPointsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-xl font-bold mb-4">Select Target Points</h3>
+            <h3 className="text-xl font-bold mb-4">Select Points Per Match</h3>
             <p className="text-gray-600 mb-6">How many points should each match be played to?</p>
             
             <div className="space-y-3">
@@ -533,14 +544,12 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
                 onClick={() => startTournamentWithPoints(16)}
                 className="w-full py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-lg">
                 16 Points
-                <span className="block text-sm font-normal opacity-90">(Shorter game)</span>
               </button>
               
               <button 
                 onClick={() => startTournamentWithPoints(32)}
                 className="w-full py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold text-lg">
                 32 Points
-                <span className="block text-sm font-normal opacity-90">(Standard game)</span>
               </button>
 
               <button 
@@ -554,17 +563,6 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Score Input Modal */}
-      {showScoreInput && (
-        <ScoreInputModal 
-          match={showScoreInput.match}
-          roundIndex={showScoreInput.roundIndex}
-          players={players}
-          onSave={(matchId, roundIdx) => saveRoundScores(matchId, roundIdx)}
-          onClose={() => setShowScoreInput(null)}
-        />
       )}
 
       <div className="bg-white shadow-sm border-b">
@@ -604,112 +602,20 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
               </div>
             )}
 
-            {filteredMatches.map(m => {
-              const paidCnt = (m.players || []).filter(p => p.paid).length;
-              const mDate = new Date(m.date + ' ' + (m.time || '00:00'));
-              const isUp = mDate >= new Date();
-              const isTournament = m.format === 'americano' || m.format === 'mexicano';
-              const canEdit = isAdmin;
-              
-              return (
-                <div key={m.id} className="bg-white rounded-lg shadow-sm p-4">
-                  <div className="flex justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">{m.courts} Court{m.courts > 1 ? 's' : ''}</h3>
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${
-                          m.format === 'open' ? 'bg-blue-100 text-blue-700' :
-                          m.format === 'americano' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
-                        }`}>{m.format === 'open' ? 'Open' : m.format === 'americano' ? 'Americano' : 'Mexicano'}</span>
-                        {m.targetPoints && (
-                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">
-                            {m.targetPoints}pts
-                          </span>
-                        )}
-                        {isUp && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">Upcoming</span>}
-                      </div>
-                      <p className="text-sm text-gray-600">{new Date(m.date).toLocaleDateString('en-GB')} {m.time && `at ${m.time}`}</p>
-                      {m.location && <p className="text-xs text-gray-500">📍 {m.location}</p>}
-                      <p className="text-xs text-gray-500 mt-1">{(m.players || []).map(p => p.name).join(', ')}</p>
-                    </div>
-                    {canEdit && (
-                      <button onClick={() => deleteMatch(m.id)} className="text-gray-400 hover:text-red-500">
-                        <Icon name="trash-2" />
-                      </button>
-                    )}
-                  </div>
-
-                  {!isUp && !isTournament && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {(m.players || []).map(p => {
-                        const playerInfo = players.find(pl => pl.id === p.id);
-                        const canPay = isAdmin || userPlayer?.id === p.id;
-                        return (
-                          <div key={p.id} className="border rounded-lg p-2">
-                            <div onClick={() => canPay && togglePayment(m.id, p.id)}
-                              className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
-                              <span className="text-sm">{p.name}</span>
-                              {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
-                            </div>
-                            {!p.paid && playerInfo && userPlayer?.id === p.id && (
-                              <div className="mt-2 pt-2 border-t flex gap-1 flex-wrap">
-                                {playerInfo.paypalLink && (
-                                  <a href={playerInfo.paypalLink} target="_blank" rel="noopener noreferrer"
-                                    className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">PayPal</a>
-                                )}
-                                {playerInfo.revolutLink && (
-                                  <a href={playerInfo.revolutLink} target="_blank" rel="noopener noreferrer"
-                                    className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded">Revolut</a>
-                                )}
-                                {playerInfo.bankDetails && (
-                                  <button onClick={() => { navigator.clipboard.writeText(playerInfo.bankDetails); alert('Copied!'); }}
-                                    className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Bank</button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {!isUp && isTournament && !m.tournamentStarted && (
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      {(m.players || []).map(p => {
-                        const playerInfo = players.find(pl => pl.id === p.id);
-                        const canPay = isAdmin || userPlayer?.id === p.id;
-                        return (
-                          <div key={p.id} className="border rounded-lg p-2">
-                            <div onClick={() => canPay && togglePayment(m.id, p.id)}
-                              className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
-                              <span className="text-sm">{p.name}</span>
-                              {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {isTournament && !m.tournamentStarted && canEdit && (
-                    <button onClick={() => showTournamentPointsDialog(m)}
-                      className="w-full mt-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center justify-center gap-2">
-                      <Icon name="trophy" />
-                      Start Tournament
-                    </button>
-                  )}
-
-                  {m.tournamentStarted && m.tournamentRounds && (
-                    <TournamentView 
-                      match={m}
-                      players={players}
-                      isAdmin={canEdit}
-                      onInputScores={(match, roundIdx) => setShowScoreInput({ match, roundIndex: roundIdx })}
-                    />
-                  )}
-                </div>
-              );
-            })}
+            {filteredMatches.map(m => (
+              <MatchCard 
+                key={m.id}
+                match={m}
+                players={players}
+                isAdmin={isAdmin}
+                userPlayer={userPlayer}
+                onDelete={deleteMatch}
+                onTogglePayment={togglePayment}
+                onStartTournament={showTournamentPointsDialog}
+                onUpdateScore={updateMatchScore}
+                onCompleteRound={completeRound}
+              />
+            ))}
 
             {isAdmin && (
               <button onClick={() => setShowNewMatch(!showNewMatch)}
@@ -720,93 +626,13 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
             )}
 
             {isAdmin && showNewMatch && (
-              <div className="bg-white rounded-lg shadow-sm p-4">
-                <h3 className="font-semibold mb-4">New Match</h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Date</label>
-                      <input type="date" value={newMatch.date} onChange={(e) => setNewMatch({ ...newMatch, date: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-lg text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Time</label>
-                      <input type="time" value={newMatch.time} onChange={(e) => setNewMatch({ ...newMatch, time: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-lg text-sm" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Format</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['open', 'americano', 'mexicano'].map(f => (
-                        <button key={f} onClick={() => setNewMatch({ ...newMatch, format: f })}
-                          className={`p-2 rounded-lg border-2 text-xs ${newMatch.format === f ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
-                          {f.charAt(0).toUpperCase() + f.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Courts</label>
-                      <input type="number" min="1" value={newMatch.courts} 
-                        onChange={(e) => setNewMatch({ ...newMatch, courts: parseInt(e.target.value) || 1 })}
-                        className="w-full px-3 py-2 border rounded-lg text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Court Fee (£)</label>
-                      <input type="number" step="0.01" value={newMatch.courtFee}
-                        onChange={(e) => setNewMatch({ ...newMatch, courtFee: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-lg text-sm" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Location</label>
-                    <select value={newMatch.location} 
-                      onChange={(e) => setNewMatch({ ...newMatch, location: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm">
-                      <option value="">Select location...</option>
-                      {locs.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Players ({newMatch.selectedPlayers.length} selected)
-                    </label>
-                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                      {players.map(p => (
-                        <button key={p.id}
-                          onClick={() => {
-                            const selected = newMatch.selectedPlayers.includes(p.id);
-                            setNewMatch({
-                              ...newMatch,
-                              selectedPlayers: selected 
-                                ? newMatch.selectedPlayers.filter(id => id !== p.id)
-                                : [...newMatch.selectedPlayers, p.id]
-                            });
-                          }}
-                          className={`p-2 text-xs rounded-lg border-2 ${
-                            newMatch.selectedPlayers.includes(p.id) 
-                              ? 'border-indigo-500 bg-indigo-50' 
-                              : 'border-gray-200'
-                          }`}>
-                          {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button onClick={createMatch}
-                    disabled={newMatch.selectedPlayers.length < 4 || !newMatch.courtFee}
-                    className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
-                    Create Match
-                  </button>
-                </div>
-              </div>
+              <NewMatchForm 
+                newMatch={newMatch}
+                setNewMatch={setNewMatch}
+                players={players}
+                locations={locs}
+                onCreate={createMatch}
+              />
             )}
           </div>
         )}
@@ -828,101 +654,18 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
         )}
 
         {view === 'players' && (
-          <div className="space-y-4">
-            {players.map(p => (
-              <div key={p.id} className="bg-white rounded-lg shadow-sm p-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{p.name}</h3>
-                    {p.email && <p className="text-xs text-gray-500">📧 {p.email}</p>}
-                  </div>
-                  {isAdmin && (
-                    <button onClick={() => {
-                      setEditingPlayer(p.id);
-                      setPlayerForm({
-                        name: p.name,
-                        paypalLink: p.paypalLink || '',
-                        revolutLink: p.revolutLink || '',
-                        bankDetails: p.bankDetails || '',
-                        email: p.email || ''
-                      });
-                    }} className="text-indigo-600 hover:text-indigo-800">
-                      <Icon name="edit" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {isAdmin && (
-              <button onClick={() => setShowNewPlayer(!showNewPlayer)}
-                className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                {showNewPlayer ? 'Cancel' : 'Add Player'}
-              </button>
-            )}
-
-            {isAdmin && showNewPlayer && (
-              <div className="bg-white rounded-lg shadow-sm p-4">
-                <h3 className="font-semibold mb-4">New Player</h3>
-                <div className="space-y-3">
-                  <input type="text" placeholder="Name" value={playerForm.name}
-                    onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg" />
-                  <input type="email" placeholder="Email (optional)" value={playerForm.email}
-                    onChange={(e) => setPlayerForm({ ...playerForm, email: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg" />
-                  <input type="url" placeholder="PayPal Link" value={playerForm.paypalLink}
-                    onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg" />
-                  <input type="url" placeholder="Revolut Link" value={playerForm.revolutLink}
-                    onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg" />
-                  <input type="text" placeholder="Bank Details" value={playerForm.bankDetails}
-                    onChange={(e) => setPlayerForm({ ...playerForm, bankDetails: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg" />
-                  <button onClick={addPlayer} className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                    Add Player
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {editingPlayer && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                  <h3 className="font-semibold mb-4">Edit Player</h3>
-                  <div className="space-y-3">
-                    <input type="text" placeholder="Name" value={playerForm.name}
-                      onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg" />
-                    <input type="email" placeholder="Email (optional)" value={playerForm.email}
-                      onChange={(e) => setPlayerForm({ ...playerForm, email: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg" />
-                    <input type="url" placeholder="PayPal Link" value={playerForm.paypalLink}
-                      onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg" />
-                    <input type="url" placeholder="Revolut Link" value={playerForm.revolutLink}
-                      onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg" />
-                    <input type="text" placeholder="Bank Details" value={playerForm.bankDetails}
-                      onChange={(e) => setPlayerForm({ ...playerForm, bankDetails: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg" />
-                    <div className="flex gap-2">
-                      <button onClick={updatePlayer} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                        Save
-                      </button>
-                      <button onClick={() => {
-                        setEditingPlayer(null);
-                        setPlayerForm({ name: '', paypalLink: '', revolutLink: '', bankDetails: '', email: '' });
-                      }} className="flex-1 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <PlayersView 
+            players={players}
+            isAdmin={isAdmin}
+            showNewPlayer={showNewPlayer}
+            setShowNewPlayer={setShowNewPlayer}
+            playerForm={playerForm}
+            setPlayerForm={setPlayerForm}
+            editingPlayer={editingPlayer}
+            setEditingPlayer={setEditingPlayer}
+            onAddPlayer={addPlayer}
+            onUpdatePlayer={updatePlayer}
+          />
         )}
 
         {view === 'admin' && isAdmin && (
@@ -946,25 +689,131 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   );
 }
 
-function TournamentView({ match, players, isAdmin, onInputScores }) {
+function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePayment, onStartTournament, onUpdateScore, onCompleteRound }) {
+  const mDate = new Date(match.date + ' ' + (match.time || '00:00'));
+  const isUp = mDate >= new Date();
+  const isTournament = match.format === 'americano' || match.format === 'mexicano';
+  const canEdit = isAdmin;
+
+  if (isTournament && match.tournamentStarted) {
+    return <TournamentCard match={match} players={players} isAdmin={canEdit} onUpdateScore={onUpdateScore} onCompleteRound={onCompleteRound} onDelete={onDelete} />;
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="flex justify-between mb-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold">{match.courts} Court{match.courts > 1 ? 's' : ''}</h3>
+            <span className={`px-2 py-0.5 text-xs rounded-full ${
+              match.format === 'open' ? 'bg-blue-100 text-blue-700' :
+              match.format === 'americano' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
+            }`}>{match.format === 'open' ? 'Open' : match.format === 'americano' ? 'Americano' : 'Mexicano'}</span>
+            {isUp && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">Upcoming</span>}
+          </div>
+          <p className="text-sm text-gray-600">{new Date(match.date).toLocaleDateString('en-GB')} {match.time && `at ${match.time}`}</p>
+          {match.location && <p className="text-xs text-gray-500">📍 {match.location}</p>}
+          <p className="text-xs text-gray-500 mt-1">{(match.players || []).map(p => p.name).join(', ')}</p>
+        </div>
+        {canEdit && (
+          <button onClick={() => onDelete(match.id)} className="text-gray-400 hover:text-red-500">
+            <Icon name="trash-2" />
+          </button>
+        )}
+      </div>
+
+      {!isUp && !isTournament && (
+        <div className="grid grid-cols-2 gap-2">
+          {(match.players || []).map(p => {
+            const playerInfo = players.find(pl => pl.id === p.id);
+            const canPay = isAdmin || userPlayer?.id === p.id;
+            return (
+              <div key={p.id} className="border rounded-lg p-2">
+                <div onClick={() => canPay && onTogglePayment(match.id, p.id)}
+                  className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
+                  <span className="text-sm">{p.name}</span>
+                  {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
+                </div>
+                {!p.paid && playerInfo && userPlayer?.id === p.id && (
+                  <div className="mt-2 pt-2 border-t flex gap-1 flex-wrap">
+                    {playerInfo.paypalLink && (
+                      <a href={playerInfo.paypalLink} target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">PayPal</a>
+                    )}
+                    {playerInfo.revolutLink && (
+                      <a href={playerInfo.revolutLink} target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded">Revolut</a>
+                    )}
+                    {playerInfo.bankDetails && (
+                      <button onClick={() => { navigator.clipboard.writeText(playerInfo.bankDetails); alert('Copied!'); }}
+                        className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Bank</button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {isTournament && !match.tournamentStarted && canEdit && (
+        <button onClick={() => onStartTournament(match)}
+          className="w-full mt-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center justify-center gap-2">
+          <Icon name="trophy" />
+          Start Tournament
+        </button>
+      )}
+    </div>
+  );
+}
+
+function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRound, onDelete }) {
+  const currentRound = match.tournamentRounds?.find(r => !r.completed);
+  const currentRoundNumber = match.currentRoundNumber || 1;
+  const totalRounds = match.format === 'americano' ? match.tournamentRounds?.length : '?';
+  
   const sortedPlayers = [...(match.tournamentPlayers || [])].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     return b.gamesWon - a.gamesWon;
   });
 
-  const currentRound = match.tournamentRounds?.find(r => !r.completed);
   const allRoundsComplete = match.tournamentRounds?.every(r => r.completed);
 
   return (
-    <div className="mt-4 border-t pt-4 space-y-4">
-      {/* Leaderboard */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold">Leaderboard</h4>
-          {match.targetPoints && (
-            <span className="text-xs text-gray-500">Target: {match.targetPoints} pts</span>
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="bg-indigo-600 text-white p-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-lg font-bold">{match.format === 'americano' ? 'Americano' : 'Mexicano'}</h3>
+              {match.targetPoints && (
+                <span className="px-2 py-1 bg-white bg-opacity-20 rounded text-sm">{match.targetPoints}pts</span>
+              )}
+            </div>
+            <p className="text-sm opacity-90">{new Date(match.date).toLocaleDateString('en-GB')}</p>
+            {match.location && <p className="text-xs opacity-75">📍 {match.location}</p>}
+          </div>
+          {isAdmin && (
+            <button onClick={() => onDelete(match.id)} className="text-white opacity-75 hover:opacity-100">
+              <Icon name="trash-2" />
+            </button>
           )}
         </div>
+        
+        {!allRoundsComplete && (
+          <div className="mt-3 bg-white bg-opacity-20 rounded p-2 text-sm">
+            <div className="flex justify-between items-center">
+              <span>Round {currentRoundNumber} of {totalRounds}</span>
+              <span>{match.courts} Court{match.courts > 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Leaderboard */}
+      <div className="p-4 border-b">
+        <h4 className="font-semibold mb-3">Leaderboard</h4>
         <div className="space-y-2">
           {sortedPlayers.map((p, idx) => {
             const isWinner = match.targetPoints && p.points >= match.targetPoints;
@@ -972,14 +821,14 @@ function TournamentView({ match, players, isAdmin, onInputScores }) {
               <div key={p.id} className={`flex items-center justify-between p-2 rounded ${
                 isWinner ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50'
               }`}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span className="font-bold text-gray-400 w-6">#{idx + 1}</span>
                   <span className="font-medium">{p.name}</span>
-                  {isWinner && <span className="text-yellow-600">👑</span>}
+                  {isWinner && <span>👑</span>}
                 </div>
                 <div className="text-right">
-                  <div className="font-bold text-indigo-600">{p.points} pts</div>
-                  <div className="text-xs text-gray-500">{p.gamesWon} wins</div>
+                  <div className="font-bold text-indigo-600">{p.points}</div>
+                  <div className="text-xs text-gray-500">{p.gamesWon}W</div>
                 </div>
               </div>
             );
@@ -988,220 +837,270 @@ function TournamentView({ match, players, isAdmin, onInputScores }) {
       </div>
 
       {/* Current Round */}
-      {currentRound && isAdmin && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
+      {currentRound && !allRoundsComplete && (
+        <div className="p-4">
+          <div className="flex justify-between items-center mb-3">
             <h4 className="font-semibold">Round {currentRound.number}</h4>
-            <button 
-              onClick={() => onInputScores(match, currentRound.number - 1)}
-              className="px-3 py-1 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">
-              Input Scores
-            </button>
           </div>
-          <div className="space-y-2">
+          
+          <div className="space-y-3">
             {currentRound.matches.map((m, idx) => {
-              const team1Names = m.team1.map(id => players.find(p => p.id === id)?.name || '?').join(' & ');
-              const team2Names = m.team2.map(id => players.find(p => p.id === id)?.name || '?').join(' & ');
+              const team1Names = m.team1.map(id => players.find(p => p.id === id)?.name || '?');
+              const team2Names = m.team2.map(id => players.find(p => p.id === id)?.name || '?');
               
               return (
-                <div key={idx} className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-xs text-gray-500 mb-1">Court {m.court}</div>
-                  <div className="flex justify-between items-center">
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">{team1Names}</div>
-                      <div className="text-xs text-gray-600">vs</div>
-                      <div className="text-sm font-medium">{team2Names}</div>
+                <div key={idx} className="border-2 border-gray-200 rounded-lg p-3">
+                  <div className="text-xs text-gray-500 mb-2 font-semibold">Court {m.court}</div>
+                  
+                  <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
+                    <div className="text-right">
+                      <div className="font-medium text-sm">{team1Names[0]}</div>
+                      <div className="text-xs text-gray-600">{team1Names[1]}</div>
                     </div>
-                    {m.score.team1 && m.score.team2 && (
-                      <div className="text-right">
-                        <div className="font-bold text-lg">{m.score.team1} - {m.score.team2}</div>
-                      </div>
-                    )}
+                    
+                    <div className="flex gap-2">
+                      <input 
+                        type="number"
+                        min="0"
+                        max={match.targetPoints || 50}
+                        value={m.score.team1}
+                        onChange={(e) => onUpdateScore(match.id, currentRound.number - 1, idx, 'team1', e.target.value)}
+                        disabled={!isAdmin}
+                        className="w-12 text-center border-2 border-gray-300 rounded font-bold text-lg p-1"
+                        placeholder="0"
+                      />
+                      <span className="text-gray-400">-</span>
+                      <input 
+                        type="number"
+                        min="0"
+                        max={match.targetPoints || 50}
+                        value={m.score.team2}
+                        onChange={(e) => onUpdateScore(match.id, currentRound.number - 1, idx, 'team2', e.target.value)}
+                        disabled={!isAdmin}
+                        className="w-12 text-center border-2 border-gray-300 rounded font-bold text-lg p-1"
+                        placeholder="0"
+                      />
+                    </div>
+                    
+                    <div>
+                      <div className="font-medium text-sm">{team2Names[0]}</div>
+                      <div className="text-xs text-gray-600">{team2Names[1]}</div>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {isAdmin && (
+            <button 
+              onClick={() => onCompleteRound(match.id, currentRound.number - 1)}
+              className="w-full mt-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
+              Complete Round {currentRound.number}
+            </button>
+          )}
         </div>
       )}
 
-      {/* Completed Rounds */}
-      {match.tournamentRounds?.filter(r => r.completed).length > 0 && (
-        <div>
-          <h4 className="font-semibold mb-2">Previous Rounds</h4>
-          <div className="space-y-2">
-            {match.tournamentRounds.filter(r => r.completed).map(round => (
-              <details key={round.number} className="bg-gray-50 p-3 rounded-lg">
-                <summary className="cursor-pointer font-medium text-sm">Round {round.number}</summary>
-                <div className="mt-2 space-y-2">
-                  {round.matches.map((m, idx) => {
-                    const team1Names = m.team1.map(id => players.find(p => p.id === id)?.name || '?').join(' & ');
-                    const team2Names = m.team2.map(id => players.find(p => p.id === id)?.name || '?').join(' & ');
-                    
-                    return (
-                      <div key={idx} className="text-xs p-2 bg-white rounded">
-                        <div className="flex justify-between">
-                          <div>
-                            <div>{team1Names}</div>
-                            <div className="text-gray-500">vs</div>
-                            <div>{team2Names}</div>
-                          </div>
-                          <div className="font-bold">{m.score.team1} - {m.score.team2}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </details>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {allRoundsComplete && match.format === 'americano' && (
-        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
-          <div className="text-2xl mb-2">🏆</div>
-          <div className="font-bold text-green-800">Tournament Complete!</div>
-          <div className="text-sm text-green-600">Winner: {sortedPlayers[0]?.name}</div>
+      {allRoundsComplete && (
+        <div className="p-4 bg-green-50 border-t-4 border-green-400 text-center">
+          <div className="text-4xl mb-2">🏆</div>
+          <div className="font-bold text-green-800 text-lg">Tournament Complete!</div>
+          <div className="text-green-600">Winner: {sortedPlayers[0]?.name} ({sortedPlayers[0]?.points} pts)</div>
         </div>
       )}
     </div>
   );
 }
 
-function ScoreInputModal({ match, roundIndex, players, onSave, onClose }) {
-  const [scores, setScores] = useState(() => {
-    const round = match.tournamentRounds[roundIndex];
-    return round.matches.map(m => ({
-      team1: m.score.team1 || '',
-      team2: m.score.team2 || ''
-    }));
-  });
-
-  const handleSave = async () => {
-    // Validate scores
-    const allScoresEntered = scores.every(s => s.team1 && s.team2);
-    if (!allScoresEntered) {
-      alert('Please enter all scores');
-      return;
-    }
-
-    // Check if scores add up to target points
-    if (match.targetPoints) {
-      const validScores = scores.every(s => {
-        const total = parseInt(s.team1) + parseInt(s.team2);
-        return total === match.targetPoints;
-      });
-      
-      if (!validScores) {
-        const proceed = confirm(`Some scores don't add up to ${match.targetPoints} points. Continue anyway?`);
-        if (!proceed) return;
-      }
-    }
-
-    // Update match in Firebase
-    const updatedRounds = [...match.tournamentRounds];
-    updatedRounds[roundIndex].matches = updatedRounds[roundIndex].matches.map((m, idx) => ({
-      ...m,
-      score: {
-        team1: scores[idx].team1,
-        team2: scores[idx].team2
-      }
-    }));
-
-    await db.collection('matches').doc(match.id).update({
-      tournamentRounds: updatedRounds
-    });
-
-    onSave(match.id, roundIndex);
-  };
-
-  const round = match.tournamentRounds[roundIndex];
-
+function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">Round {round.number} Scores</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <Icon name="x" />
-          </button>
+    <div className="bg-white rounded-lg shadow-sm p-4">
+      <h3 className="font-semibold mb-4">New Match</h3>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Date</label>
+            <input type="date" value={newMatch.date} onChange={(e) => setNewMatch({ ...newMatch, date: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Time</label>
+            <input type="time" value={newMatch.time} onChange={(e) => setNewMatch({ ...newMatch, time: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg text-sm" />
+          </div>
         </div>
 
-        <div className="space-y-4">
-          {round.matches.map((m, idx) => {
-            const team1Names = m.team1.map(id => players.find(p => p.id === id)?.name || '?').join(' & ');
-            const team2Names = m.team2.map(id => players.find(p => p.id === id)?.name || '?').join(' & ');
-            
-            return (
-              <div key={idx} className="border rounded-lg p-4">
-                <div className="text-xs text-gray-500 mb-2">Court {m.court}</div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 text-sm font-medium">{team1Names}</div>
-                    <input 
-                      type="number" 
-                      min="0"
-                      max={match.targetPoints || 100}
-                      value={scores[idx].team1}
-                      onChange={(e) => {
-                        const newScores = [...scores];
-                        newScores[idx].team1 = e.target.value;
-                        setScores(newScores);
-                      }}
-                      className="w-20 px-3 py-2 border rounded-lg text-center font-bold"
-                      placeholder="0"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 text-sm font-medium">{team2Names}</div>
-                    <input 
-                      type="number" 
-                      min="0"
-                      max={match.targetPoints || 100}
-                      value={scores[idx].team2}
-                      onChange={(e) => {
-                        const newScores = [...scores];
-                        newScores[idx].team2 = e.target.value;
-                        setScores(newScores);
-                      }}
-                      className="w-20 px-3 py-2 border rounded-lg text-center font-bold"
-                      placeholder="0"
-                    />
-                  </div>
-                  
-                  {match.targetPoints && scores[idx].team1 && scores[idx].team2 && (
-                    <div className="text-xs text-center">
-                      {parseInt(scores[idx].team1) + parseInt(scores[idx].team2) === match.targetPoints ? (
-                        <span className="text-green-600">✓ Total: {match.targetPoints}</span>
-                      ) : (
-                        <span className="text-red-600">
-                          Total: {parseInt(scores[idx].team1) + parseInt(scores[idx].team2)} (should be {match.targetPoints})
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div>
+          <label className="block text-sm font-medium mb-2">Format</label>
+          <div className="grid grid-cols-3 gap-2">
+            {['open', 'americano', 'mexicano'].map(f => (
+              <button key={f} onClick={() => setNewMatch({ ...newMatch, format: f })}
+                className={`p-2 rounded-lg border-2 text-xs ${newMatch.format === f ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
-          <button 
-            onClick={handleSave}
-            className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
-            Save Scores
-          </button>
-          <button 
-            onClick={onClose}
-            className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-            Cancel
-          </button>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Courts</label>
+            <input type="number" min="1" value={newMatch.courts} 
+              onChange={(e) => setNewMatch({ ...newMatch, courts: parseInt(e.target.value) || 1 })}
+              className="w-full px-3 py-2 border rounded-lg text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Court Fee (£)</label>
+            <input type="number" step="0.01" value={newMatch.courtFee}
+              onChange={(e) => setNewMatch({ ...newMatch, courtFee: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg text-sm" />
+          </div>
         </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Location</label>
+          <select value={newMatch.location} 
+            onChange={(e) => setNewMatch({ ...newMatch, location: e.target.value })}
+            className="w-full px-3 py-2 border rounded-lg text-sm">
+            <option value="">Select location...</option>
+            {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Players ({newMatch.selectedPlayers.length} selected)
+          </label>
+          <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+            {players.map(p => (
+              <button key={p.id}
+                onClick={() => {
+                  const selected = newMatch.selectedPlayers.includes(p.id);
+                  setNewMatch({
+                    ...newMatch,
+                    selectedPlayers: selected 
+                      ? newMatch.selectedPlayers.filter(id => id !== p.id)
+                      : [...newMatch.selectedPlayers, p.id]
+                  });
+                }}
+                className={`p-2 text-xs rounded-lg border-2 ${
+                  newMatch.selectedPlayers.includes(p.id) 
+                    ? 'border-indigo-500 bg-indigo-50' 
+                    : 'border-gray-200'
+                }`}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button onClick={onCreate}
+          disabled={newMatch.selectedPlayers.length < 4 || !newMatch.courtFee}
+          className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+          Create Match
+        </button>
       </div>
+    </div>
+  );
+}
+
+function PlayersView({ players, isAdmin, showNewPlayer, setShowNewPlayer, playerForm, setPlayerForm, editingPlayer, setEditingPlayer, onAddPlayer, onUpdatePlayer }) {
+  return (
+    <div className="space-y-4">
+      {players.map(p => (
+        <div key={p.id} className="bg-white rounded-lg shadow-sm p-4">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <h3 className="font-semibold">{p.name}</h3>
+              {p.email && <p className="text-xs text-gray-500">📧 {p.email}</p>}
+            </div>
+            {isAdmin && (
+              <button onClick={() => {
+                setEditingPlayer(p.id);
+                setPlayerForm({
+                  name: p.name,
+                  paypalLink: p.paypalLink || '',
+                  revolutLink: p.revolutLink || '',
+                  bankDetails: p.bankDetails || '',
+                  email: p.email || ''
+                });
+              }} className="text-indigo-600 hover:text-indigo-800">
+                <Icon name="edit" />
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {isAdmin && (
+        <button onClick={() => setShowNewPlayer(!showNewPlayer)}
+          className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+          {showNewPlayer ? 'Cancel' : 'Add Player'}
+        </button>
+      )}
+
+      {isAdmin && showNewPlayer && (
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="font-semibold mb-4">New Player</h3>
+          <div className="space-y-3">
+            <input type="text" placeholder="Name" value={playerForm.name}
+              onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg" />
+            <input type="email" placeholder="Email (optional)" value={playerForm.email}
+              onChange={(e) => setPlayerForm({ ...playerForm, email: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg" />
+            <input type="url" placeholder="PayPal Link" value={playerForm.paypalLink}
+              onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg" />
+            <input type="url" placeholder="Revolut Link" value={playerForm.revolutLink}
+              onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg" />
+            <input type="text" placeholder="Bank Details" value={playerForm.bankDetails}
+              onChange={(e) => setPlayerForm({ ...playerForm, bankDetails: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg" />
+            <button onClick={onAddPlayer} className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+              Add Player
+            </button>
+          </div>
+        </div>
+      )}
+
+      {editingPlayer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="font-semibold mb-4">Edit Player</h3>
+            <div className="space-y-3">
+              <input type="text" placeholder="Name" value={playerForm.name}
+                onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg" />
+              <input type="email" placeholder="Email (optional)" value={playerForm.email}
+                onChange={(e) => setPlayerForm({ ...playerForm, email: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg" />
+              <input type="url" placeholder="PayPal Link" value={playerForm.paypalLink}
+                onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg" />
+              <input type="url" placeholder="Revolut Link" value={playerForm.revolutLink}
+                onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg" />
+              <input type="text" placeholder="Bank Details" value={playerForm.bankDetails}
+                onChange={(e) => setPlayerForm({ ...playerForm, bankDetails: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg" />
+              <div className="flex gap-2">
+                <button onClick={onUpdatePlayer} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                  Save
+                </button>
+                <button onClick={() => {
+                  setEditingPlayer(null);
+                  setPlayerForm({ name: '', paypalLink: '', revolutLink: '', bankDetails: '', email: '' });
+                }} className="flex-1 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
