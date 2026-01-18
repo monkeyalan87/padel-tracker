@@ -673,6 +673,24 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
                     </div>
                   )}
 
+                  {!isUp && isTournament && !m.tournamentStarted && (
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      {(m.players || []).map(p => {
+                        const playerInfo = players.find(pl => pl.id === p.id);
+                        const canPay = isAdmin || userPlayer?.id === p.id;
+                        return (
+                          <div key={p.id} className="border rounded-lg p-2">
+                            <div onClick={() => canPay && togglePayment(m.id, p.id)}
+                              className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
+                              <span className="text-sm">{p.name}</span>
+                              {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {isTournament && !m.tournamentStarted && canEdit && (
                     <button onClick={() => showTournamentPointsDialog(m)}
                       className="w-full mt-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center justify-center gap-2">
