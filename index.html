@@ -14,11 +14,28 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
 const { useState, useEffect } = React;
+
+// Initialize Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDog2f8jYrxm7J19h6QOtTUsuDgiNUmtSU",
+  authDomain: "padel-tracker-uk.firebaseapp.com",
+  projectId: "padel-tracker-uk",
+  storageBucket: "padel-tracker-uk.firebasestorage.app",
+  messagingSenderId: "557326239556",
+  appId: "1:557326239556:web:4bb796309b0eac6697f911"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 function Icon({ name }) {
   useEffect(() => { lucide.createIcons(); });
@@ -26,22 +43,15 @@ function Icon({ name }) {
 }
 
 function App() {
-  const load = (key, def) => {
-    try {
-      const saved = localStorage.getItem(key);
-      return saved ? JSON.parse(saved) : def;
-    } catch { return def; }
-  };
-
   const [view, setView] = useState('matches');
-  const [players, setPlayers] = useState(() => load('players', [
-    { id: 1, name: 'Alex' }, { id: 2, name: 'Sam' },
-    { id: 3, name: 'Jordan' }, { id: 4, name: 'Casey' }
-  ]));
-  const [matches, setMatches] = useState(() => load('matches', []));
+  const [players, setPlayers] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showNewMatch, setShowNewMatch] = useState(false);
   const [showNewPlayer, setShowNewPlayer] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [editingPlayer, setEditingPlayer] = useState(null);
+  const [playerForm, setPlayerForm] = useState({ name: '', paypalLink: '', revolutLink: '', bankDetails: '' });
   const [showPass, setShowPass] = useState(false);
   const [tempPass, setTempPass] = useState('');
   const [passAction, setPassAction] = useState(null);
@@ -54,16 +64,46 @@ function App() {
 
   const locs = ['Wrexham Tennis Centre', 'Padel Shed Wrexham', 'Ace Padel Club @ Lion Quays', 'Padel at CNW Golf Academy'];
 
-  useEffect(() => { localStorage.setItem('players', JSON.stringify(players)); }, [players]);
-  useEffect(() => { localStorage.setItem('matches', JSON.stringify(matches)); }, [matches]);
+  // Load data from Firebase
+  useEffect(() => {
+    const unsubPlayers = db.collection('players').orderBy('name').onSnapshot(snapshot => {
+      const playerData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPlayers(playerData);
+      setLoading(false);
+    });
+
+    const unsubMatches = db.collection('matches').orderBy('date', 'desc').onSnapshot(snapshot => {
+      const matchData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMatches(matchData);
+    });
+
+    return () => {
+      unsubPlayers();
+      unsubMatches();
+    };
+  }, []);
+
   useEffect(() => { lucide.createIcons(); });
 
   const checkPass = () => {
     if (tempPass === 'padel2025') {
       setIsAuth(true); setShowPass(false); setTempPass('');
       if (passAction === 'addPlayer') setShowNewPlayer(true);
+      else if (passAction === 'editPlayer' && playerToDel) {
+        const player = players.find(p => p.id === playerToDel);
+        if (player) {
+          setEditingPlayer(player.id);
+          setPlayerForm({
+            name: player.name || '',
+            paypalLink: player.paypalLink || '',
+            revolutLink: player.revolutLink || '',
+            bankDetails: player.bankDetails || ''
+          });
+        }
+        setPlayerToDel(null);
+      }
       else if (passAction === 'deletePlayer' && playerToDel) {
-        setPlayers(players.filter(p => p.id !== playerToDel));
+        db.collection('players').doc(playerToDel).delete();
         setPlayerToDel(null);
       }
       setPassAction(null);
@@ -79,22 +119,65 @@ function App() {
     setShowPass(true);
   };
 
-  const addPlayer = () => {
-    if (newPlayerName.trim()) {
-      setPlayers([...players, { id: Date.now(), name: newPlayerName.trim() }]);
-      setNewPlayerName(''); setShowNewPlayer(false); setIsAuth(false);
+  const addPlayer = async () => {
+    if (playerForm.name.trim()) {
+      await db.collection('players').add({
+        name: playerForm.name.trim(),
+        paypalLink: playerForm.paypalLink.trim(),
+        revolutLink: playerForm.revolutLink.trim(),
+        bankDetails: playerForm.bankDetails.trim(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      setPlayerForm({ name: '', paypalLink: '', revolutLink: '', bankDetails: '' });
+      setShowNewPlayer(false); 
+      setIsAuth(false);
     }
   };
 
-  const createMatch = () => {
+  const updatePlayer = async () => {
+    if (editingPlayer && playerForm.name.trim()) {
+      await db.collection('players').doc(editingPlayer).update({
+        name: playerForm.name.trim(),
+        paypalLink: playerForm.paypalLink.trim(),
+        revolutLink: playerForm.revolutLink.trim(),
+        bankDetails: playerForm.bankDetails.trim()
+      });
+      setEditingPlayer(null);
+      setPlayerForm({ name: '', paypalLink: '', revolutLink: '', bankDetails: '' });
+      setIsAuth(false);
+    }
+  };
+
+  const startEditPlayer = (player) => {
+    if (isAuth) {
+      setEditingPlayer(player.id);
+      setPlayerForm({
+        name: player.name || '',
+        paypalLink: player.paypalLink || '',
+        revolutLink: player.revolutLink || '',
+        bankDetails: player.bankDetails || ''
+      });
+    } else {
+      reqAuth('editPlayer', player.id);
+    }
+  };
+
+  const createMatch = async () => {
     if (newMatch.selectedPlayers.length >= 4 && newMatch.courtFee) {
-      setMatches([{
-        id: Date.now(), ...newMatch, courtFee: parseFloat(newMatch.courtFee),
-        players: newMatch.selectedPlayers.map(id => ({
-          id, name: players.find(p => p.id === id).name, paid: false
-        }))
-      }, ...matches]);
-      setNewMatch({ date: new Date().toISOString().split('T')[0], time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [] });
+      await db.collection('matches').add({
+        ...newMatch,
+        courtFee: parseFloat(newMatch.courtFee),
+        players: newMatch.selectedPlayers.map(id => {
+          const player = players.find(p => p.id === id);
+          return { id, name: player.name, paid: false };
+        }),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      setNewMatch({
+        date: new Date().toISOString().split('T')[0],
+        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: []
+      });
       setShowNewMatch(false);
     }
   };
@@ -125,10 +208,16 @@ function App() {
     }
   };
 
-  const togPay = (mid, pid) => {
-    setMatches(matches.map(m => m.id === mid ? {
-      ...m, players: m.players.map(p => p.id === pid ? { ...p, paid: !p.paid } : p)
-    } : m));
+  const togPay = async (matchId, playerId) => {
+    const match = matches.find(m => m.id === matchId);
+    const updatedPlayers = match.players.map(p => 
+      p.id === playerId ? { ...p, paid: !p.paid } : p
+    );
+    await db.collection('matches').doc(matchId).update({ players: updatedPlayers });
+  };
+
+  const deleteMatch = async (matchId) => {
+    await db.collection('matches').doc(matchId).delete();
   };
 
   const feePerPlayer = newMatch.courtFee && newMatch.selectedPlayers.length > 0 
@@ -140,18 +229,29 @@ function App() {
     return s + (m.courtFee / m.players.length) * paid;
   }, 0);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🎾</div>
+          <p className="text-lg text-gray-600">Loading Padel Tracker...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold text-gray-900">Padel Tracker</h1>
-          <p className="text-sm text-gray-600">Manage matches and payments</p>
+          <p className="text-sm text-gray-600">Synced across all devices ☁️</p>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-4">
-        <div className="bg-white rounded-lg shadow-sm p-1 grid grid-cols-5 gap-1">
-          {['matches', 'tournament', 'stats', 'admin', 'players'].map(tab => (
+        <div className="bg-white rounded-lg shadow-sm p-1 grid grid-cols-4 gap-1">
+          {['matches', 'stats', 'admin', 'players'].map(tab => (
             <button key={tab} onClick={() => setView(tab)}
               className={`py-2 px-2 rounded-md text-xs font-medium ${view === tab ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -167,6 +267,7 @@ function App() {
               <div className="bg-white rounded-lg shadow-sm p-8 text-center">
                 <div className="text-6xl mb-4">📅</div>
                 <p className="text-gray-600">No matches yet</p>
+                <p className="text-sm text-gray-500 mt-2">Create a match and it will sync to all devices!</p>
               </div>
             )}
 
@@ -196,7 +297,7 @@ function App() {
                       <button onClick={() => genICS(m)} className="text-indigo-600 hover:text-indigo-700">
                         <Icon name="calendar" />
                       </button>
-                      <button onClick={() => setMatches(matches.filter(x => x.id !== m.id))} className="text-gray-400 hover:text-red-500">
+                      <button onClick={() => deleteMatch(m.id)} className="text-gray-400 hover:text-red-500">
                         <Icon name="trash-2" />
                       </button>
                     </div>
@@ -215,13 +316,42 @@ function App() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        {m.players.map(p => (
-                          <div key={p.id} onClick={() => togPay(m.id, p.id)}
-                            className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <span className="text-sm">{p.name}</span>
-                            {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
-                          </div>
-                        ))}
+                        {m.players.map(p => {
+                          const playerInfo = players.find(pl => pl.id === p.id);
+                          return (
+                            <div key={p.id} className="border rounded-lg p-2">
+                              <div onClick={() => togPay(m.id, p.id)}
+                                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded p-1">
+                                <span className="text-sm">{p.name}</span>
+                                {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
+                              </div>
+                              {!p.paid && playerInfo && (
+                                <div className="mt-2 pt-2 border-t flex gap-1 flex-wrap">
+                                  {playerInfo.paypalLink && (
+                                    <a href={playerInfo.paypalLink} target="_blank" rel="noopener noreferrer"
+                                      className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                      PayPal
+                                    </a>
+                                  )}
+                                  {playerInfo.revolutLink && (
+                                    <a href={playerInfo.revolutLink} target="_blank" rel="noopener noreferrer"
+                                      className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200">
+                                      Revolut
+                                    </a>
+                                  )}
+                                  {playerInfo.bankDetails && (
+                                    <button onClick={() => {
+                                      navigator.clipboard.writeText(playerInfo.bankDetails);
+                                      alert('Bank details copied!');
+                                    }} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
+                                      Bank
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </>
                   )}
@@ -281,6 +411,7 @@ function App() {
                     <label className="block text-sm font-medium mb-1">Fee (£)</label>
                     <input type="number" step="0.01" value={newMatch.courtFee}
                       onChange={(e) => setNewMatch({ ...newMatch, courtFee: e.target.value })}
+                      placeholder="30.00"
                       className="w-full px-3 py-2 border rounded-lg text-sm" />
                     {newMatch.courtFee && newMatch.selectedPlayers.length > 0 && (
                       <p className="text-sm text-gray-600 mt-1">£{feePerPlayer} per player</p>
@@ -289,7 +420,7 @@ function App() {
 
                   <div>
                     <label className="block text-sm font-medium mb-2">Players ({newMatch.selectedPlayers.length}/{newMatch.courts * 4})</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                       {players.map(p => (
                         <button key={p.id} onClick={() => togPlayer(p.id)}
                           className={`p-2 rounded-lg border-2 text-xs ${newMatch.selectedPlayers.includes(p.id) ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
@@ -302,7 +433,7 @@ function App() {
                   <div className="flex gap-2">
                     <button onClick={createMatch} disabled={newMatch.selectedPlayers.length !== newMatch.courts * 4 || !newMatch.courtFee}
                       className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 text-sm">
-                      Create
+                      Create Match
                     </button>
                     <button onClick={() => setShowNewMatch(false)} className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
                   </div>
@@ -319,10 +450,17 @@ function App() {
           </div>
         )}
 
+        {view === 'tournament' && (
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <div className="text-6xl mb-4">🏆</div>
+            <p className="text-gray-600">Tournaments coming soon</p>
+          </div>
+        )}
+
         {view === 'stats' && (
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <div className="text-6xl mb-4">📊</div>
-            <p className="text-gray-600">No stats yet</p>
+            <p className="text-gray-600">Stats coming soon</p>
           </div>
         )}
 
@@ -357,31 +495,75 @@ function App() {
         {view === 'players' && (
           <div className="space-y-4">
             {players.map(p => (
-              <div key={p.id} className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-indigo-700 font-semibold text-lg">{p.name.charAt(0)}</span>
+              <div key={p.id} className="bg-white rounded-lg shadow-sm p-4">
+                {editingPlayer === p.id ? (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold mb-2">Edit Player</h3>
+                    <input type="text" value={playerForm.name} onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
+                      placeholder="Player name" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    <input type="url" value={playerForm.paypalLink} onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
+                      placeholder="PayPal link (optional)" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    <input type="url" value={playerForm.revolutLink} onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
+                      placeholder="Revolut link (optional)" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    <textarea value={playerForm.bankDetails} onChange={(e) => setPlayerForm({ ...playerForm, bankDetails: e.target.value })}
+                      placeholder="Bank details (optional)" className="w-full px-3 py-2 border rounded-lg text-sm" rows="2" />
+                    <div className="flex gap-2">
+                      <button onClick={updatePlayer} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm">Save</button>
+                      <button onClick={() => { setEditingPlayer(null); setPlayerForm({ name: '', paypalLink: '', revolutLink: '', bankDetails: '' }); setIsAuth(false); }}
+                        className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
+                    </div>
                   </div>
-                  <div className="font-semibold">{p.name}</div>
-                </div>
-                <button onClick={() => {
-                  if (isAuth) { setPlayers(players.filter(x => x.id !== p.id)); setIsAuth(false); }
-                  else reqAuth('deletePlayer', p.id);
-                }} className="text-gray-400 hover:text-red-500">
-                  <Icon name="trash-2" />
-                </button>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <span className="text-indigo-700 font-semibold text-lg">{p.name.charAt(0)}</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold">{p.name}</div>
+                        <div className="flex gap-2 mt-1">
+                          {p.paypalLink && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">PayPal</span>}
+                          {p.revolutLink && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Revolut</span>}
+                          {p.bankDetails && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Bank</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => startEditPlayer(p)} className="text-gray-400 hover:text-indigo-500">
+                        <Icon name="edit-2" />
+                      </button>
+                      <button onClick={() => {
+                        if (isAuth) { 
+                          db.collection('players').doc(p.id).delete(); 
+                          setIsAuth(false); 
+                        } else reqAuth('deletePlayer', p.id);
+                      }} className="text-gray-400 hover:text-red-500">
+                        <Icon name="trash-2" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
 
             {showNewPlayer && isAuth && (
               <div className="bg-white rounded-lg shadow-sm p-4">
                 <h3 className="font-semibold mb-3">Add Player</h3>
-                <input type="text" value={newPlayerName} onChange={(e) => setNewPlayerName(e.target.value)}
-                  placeholder="Player name" className="w-full px-3 py-2 border rounded-lg mb-3 text-sm"
-                  onKeyPress={(e) => e.key === 'Enter' && addPlayer()} />
-                <div className="flex gap-2">
-                  <button onClick={addPlayer} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm">Add</button>
-                  <button onClick={() => { setShowNewPlayer(false); setNewPlayerName(''); setIsAuth(false); }}
+                <div className="space-y-3">
+                  <input type="text" value={playerForm.name} onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
+                    placeholder="Player name" className="w-full px-3 py-2 border rounded-lg text-sm"
+                    onKeyPress={(e) => e.key === 'Enter' && playerForm.name && addPlayer()} />
+                  <input type="url" value={playerForm.paypalLink} onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
+                    placeholder="PayPal link (optional)" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <input type="url" value={playerForm.revolutLink} onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
+                    placeholder="Revolut link (optional)" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <textarea value={playerForm.bankDetails} onChange={(e) => setPlayerForm({ ...playerForm, bankDetails: e.target.value })}
+                    placeholder="Bank details (optional)" className="w-full px-3 py-2 border rounded-lg text-sm" rows="2" />
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={addPlayer} disabled={!playerForm.name.trim()} 
+                    className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm disabled:bg-gray-300">Add Player</button>
+                  <button onClick={() => { setShowNewPlayer(false); setPlayerForm({ name: '', paypalLink: '', revolutLink: '', bankDetails: '' }); setIsAuth(false); }}
                     className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
                 </div>
               </div>
@@ -398,7 +580,7 @@ function App() {
             else reqAuth('addPlayer');
           }
         }} className={`w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 flex items-center justify-center ${
-          view === 'stats' || view === 'admin' || view === 'tournament' ? 'hidden' : ''
+          view === 'stats' || view === 'admin' ? 'hidden' : ''
         }`}>
           <Icon name="plus" />
         </button>
