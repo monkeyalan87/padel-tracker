@@ -544,6 +544,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showNewMatch, setShowNewMatch] = useState(false);
+  const [editingMatch, setEditingMatch] = useState(null);
   const [showNewPlayer, setShowNewPlayer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerForm, setPlayerForm] = useState({ name: '', paypalLink: '', revolutLink: '', sortCode: '', accountNumber: '', email: '' });
@@ -669,6 +670,99 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
       });
       setShowNewMatch(false);
     }
+  };
+
+  const editMatch = (match) => {
+    setEditingMatch(match.id);
+    setNewMatch({
+      date: match.date,
+      time: match.time || '',
+      courtFee: match.courtFee || '',
+      courts: match.courts || 1,
+      format: match.format,
+      location: match.location || '',
+      selectedPlayers: match.players ? match.players.map(p => p.id) : [],
+      paymentOrganizer: match.paymentOrganizer || null,
+      openRegistration: match.openRegistration || false,
+      maxPlayers: match.maxPlayers || 4
+    });
+    setShowNewMatch(true);
+  };
+
+  const updateMatch = async () => {
+    if (!editingMatch) return;
+
+    const match = matches.find(m => m.id === editingMatch);
+    
+    // For open registration matches
+    if (newMatch.openRegistration && newMatch.courtFee) {
+      const matchData = {
+        date: newMatch.date,
+        time: newMatch.time,
+        courtFee: parseFloat(newMatch.courtFee),
+        courts: newMatch.courts,
+        format: newMatch.format,
+        location: newMatch.location,
+        openRegistration: true,
+        maxPlayers: newMatch.maxPlayers,
+        // Recalculate cost per player if players already joined
+        costPerPlayer: match.players && match.players.length > 0 
+          ? parseFloat(newMatch.courtFee) / match.players.length 
+          : 0
+      };
+      
+      await db.collection('matches').doc(editingMatch).update(matchData);
+      
+      setNewMatch({
+        date: new Date().toISOString().split('T')[0],
+        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4
+      });
+      setEditingMatch(null);
+      setShowNewMatch(false);
+      return;
+    }
+    
+    // For regular matches with selected players
+    if (newMatch.selectedPlayers.length >= 4 && newMatch.courtFee) {
+      const costPerPlayer = parseFloat(newMatch.courtFee) / newMatch.selectedPlayers.length;
+      
+      await db.collection('matches').doc(editingMatch).update({
+        date: newMatch.date,
+        time: newMatch.time,
+        courtFee: parseFloat(newMatch.courtFee),
+        costPerPlayer: costPerPlayer,
+        courts: newMatch.courts,
+        format: newMatch.format,
+        location: newMatch.location,
+        players: newMatch.selectedPlayers.map(id => {
+          const player = players.find(p => p.id === id);
+          const existingPlayer = match.players?.find(p => p.id === id);
+          return { 
+            id, 
+            name: player.name, 
+            paid: existingPlayer?.paid || id === newMatch.paymentOrganizer
+          };
+        }),
+        paymentOrganizer: newMatch.paymentOrganizer,
+        openRegistration: false
+      });
+      
+      setNewMatch({
+        date: new Date().toISOString().split('T')[0],
+        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4
+      });
+      setEditingMatch(null);
+      setShowNewMatch(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingMatch(null);
+    setNewMatch({
+      date: new Date().toISOString().split('T')[0],
+      time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4
+    });
+    setShowNewMatch(false);
   };
 
   const togglePayment = async (matchId, playerId) => {
@@ -965,6 +1059,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
                   onTogglePayment={togglePayment}
                   onJoinMatch={joinMatch}
                   onLeaveMatch={leaveMatch}
+                  onEditMatch={editMatch}
                   onStartTournament={showTournamentPointsDialog}
                   onUpdateScore={updateMatchScore}
                   onCompleteRound={completeRound}
@@ -985,7 +1080,9 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
                 setNewMatch={setNewMatch}
                 players={players}
                 locations={locs}
-                onCreate={createMatch}
+                onCreate={editingMatch ? updateMatch : createMatch}
+                onCancel={editingMatch ? cancelEdit : null}
+                isEditing={!!editingMatch}
               />
             )}
           </div>
@@ -1119,7 +1216,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   );
 }
 
-function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePayment, onJoinMatch, onLeaveMatch, onStartTournament, onUpdateScore, onCompleteRound }) {
+function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePayment, onJoinMatch, onLeaveMatch, onEditMatch, onStartTournament, onUpdateScore, onCompleteRound }) {
   const [showScoreInput, setShowScoreInput] = useState(false);
   const [matchScores, setMatchScores] = useState(match.matchScores || [
     { team1: '', team2: '' },
@@ -1224,6 +1321,14 @@ function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePaym
               className="text-gray-600 hover:text-blue-600"
               title="Share match link">
               <Icon name="share-2" />
+            </button>
+          )}
+          {canEdit && (
+            <button 
+              onClick={() => onEditMatch(match)}
+              className="text-gray-600 hover:text-indigo-600"
+              title="Edit match">
+              <Icon name="edit" />
             </button>
           )}
           {!isUp && canEdit && !isTournament && (
@@ -1894,7 +1999,7 @@ function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRoun
   );
 }
 
-function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate }) {
+function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate, onCancel, isEditing }) {
   const costPerPlayer = newMatch.courtFee && newMatch.selectedPlayers.length > 0 
     ? (parseFloat(newMatch.courtFee) / newMatch.selectedPlayers.length).toFixed(2)
     : '0.00';
@@ -2060,15 +2165,27 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate }) {
           </>
         )}
 
-        <button onClick={onCreate}
-          disabled={
-            newMatch.openRegistration 
-              ? !newMatch.courtFee
-              : (newMatch.selectedPlayers.length < 4 || !newMatch.courtFee || !newMatch.paymentOrganizer)
-          }
-          className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
-          {newMatch.openRegistration ? 'Create & Get Link' : 'Create Match'}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={onCreate}
+            disabled={
+              newMatch.openRegistration 
+                ? !newMatch.courtFee
+                : (newMatch.selectedPlayers.length < 4 || !newMatch.courtFee || !newMatch.paymentOrganizer)
+            }
+            className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
+            {isEditing 
+              ? 'Update Match' 
+              : (newMatch.openRegistration ? 'Create & Get Link' : 'Create Match')
+            }
+          </button>
+          
+          {isEditing && onCancel && (
+            <button onClick={onCancel}
+              className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
