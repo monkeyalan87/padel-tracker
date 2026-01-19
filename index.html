@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- FORCE NO CACHE - VERSION 2.1 - 2025-01-19 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- END CACHE CONTROL -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Padel Tracker">
     <meta name="theme-color" content="#4F46E5">
-    <title>Padel Tracker</title>
+    <title>Padel Tracker v2.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -121,36 +126,20 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
-    // Handle redirect result from Google/Apple sign-in
-    const handleRedirect = async () => {
-      try {
-        const result = await auth.getRedirectResult();
-        if (result && result.user && mounted) {
-          console.log('✅ Signed in via redirect:', result.user.email);
-          // Don't set loading false yet - let onAuthStateChanged handle it
-        }
-      } catch (error) {
-        if (error.code !== 'auth/popup-closed-by-user' && mounted) {
-          console.error('❌ Redirect sign-in error:', error);
-          alert('Sign in failed: ' + error.message);
-          setLoading(false);
-        }
-      }
-    };
-
-    handleRedirect();
-
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (!mounted) return;
       
       console.log('👤 Auth state changed:', currentUser?.email || 'Not signed in');
-      setUser(currentUser);
       
       if (currentUser) {
+        console.log('✅ User is signed in:', currentUser.email);
+        setUser(currentUser);
+        
         if (ADMIN_EMAILS.includes(currentUser.email)) {
           console.log('👑 Admin detected');
           setIsAdmin(true);
           setUserPlayer(null);
+          setLoading(false);
         } else {
           console.log('🔍 Checking for player profile...');
           const playerSnap = await db.collection('players').where('email', '==', currentUser.email).get();
@@ -159,15 +148,34 @@ function App() {
             console.log('✅ Player found:', playerData.name);
             setUserPlayer(playerData);
             setIsAdmin(false);
+            setLoading(false);
           } else {
             console.log('📝 New user - showing registration');
             setLinkingEmail(currentUser.email);
+            setUser(currentUser);
+            setLoading(false);
           }
         }
       } else {
-        console.log('👋 User signed out');
+        console.log('👋 No user signed in');
+        setUser(null);
         setIsAdmin(false);
         setUserPlayer(null);
+        setLoading(false);
+      }
+    });
+
+    // Handle redirect result after sign-in
+    auth.getRedirectResult().then((result) => {
+      if (result && result.user) {
+        console.log('✅ Redirect result - user signed in:', result.user.email);
+      } else {
+        console.log('ℹ️ No redirect result (normal page load)');
+      }
+    }).catch((error) => {
+      console.error('❌ Redirect error:', error.code, error.message);
+      if (error.code !== 'auth/popup-closed-by-user') {
+        alert('Sign in failed: ' + error.message);
       }
       setLoading(false);
     });
@@ -201,6 +209,8 @@ function App() {
   };
 
   const logout = async () => {
+    console.log('🚪 LOGOUT CALLED - User manually signing out');
+    console.trace('Logout stack trace:');
     await auth.signOut();
     setIsAdmin(false);
     setUserPlayer(null);
