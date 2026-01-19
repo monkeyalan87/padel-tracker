@@ -34,6 +34,9 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
+// Set persistence to LOCAL so auth state survives page refreshes and redirects
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
 function Icon({ name }) {
   useEffect(() => { lucide.createIcons(); });
   return React.createElement('i', { 'data-lucide': name });
@@ -116,50 +119,72 @@ function App() {
   const ADMIN_EMAILS = ['edavies87@gmail.com'];
 
   useEffect(() => {
+    let mounted = true;
+
     // Handle redirect result from Google/Apple sign-in
-    auth.getRedirectResult().then((result) => {
-      if (result.user) {
-        // User successfully signed in via redirect
-        console.log('Signed in via redirect:', result.user.email);
+    const handleRedirect = async () => {
+      try {
+        const result = await auth.getRedirectResult();
+        if (result && result.user && mounted) {
+          console.log('✅ Signed in via redirect:', result.user.email);
+          // Don't set loading false yet - let onAuthStateChanged handle it
+        }
+      } catch (error) {
+        if (error.code !== 'auth/popup-closed-by-user' && mounted) {
+          console.error('❌ Redirect sign-in error:', error);
+          alert('Sign in failed: ' + error.message);
+          setLoading(false);
+        }
       }
-    }).catch((error) => {
-      if (error.code !== 'auth/popup-closed-by-user') {
-        console.error('Redirect sign-in error:', error);
-        alert('Sign in failed: ' + error.message);
-      }
-    });
+    };
+
+    handleRedirect();
 
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      if (!mounted) return;
+      
+      console.log('👤 Auth state changed:', currentUser?.email || 'Not signed in');
       setUser(currentUser);
       
       if (currentUser) {
         if (ADMIN_EMAILS.includes(currentUser.email)) {
+          console.log('👑 Admin detected');
           setIsAdmin(true);
           setUserPlayer(null);
         } else {
+          console.log('🔍 Checking for player profile...');
           const playerSnap = await db.collection('players').where('email', '==', currentUser.email).get();
           if (!playerSnap.empty) {
             const playerData = { id: playerSnap.docs[0].id, ...playerSnap.docs[0].data() };
+            console.log('✅ Player found:', playerData.name);
             setUserPlayer(playerData);
             setIsAdmin(false);
           } else {
+            console.log('📝 New user - showing registration');
             setLinkingEmail(currentUser.email);
           }
         }
       } else {
+        console.log('👋 User signed out');
         setIsAdmin(false);
         setUserPlayer(null);
       }
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const signInWithGoogle = async () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
+      console.log('🔄 Starting Google sign-in...');
       await auth.signInWithRedirect(provider);
     } catch (error) {
+      console.error('❌ Sign-in initiation failed:', error);
       alert('Sign in failed: ' + error.message);
     }
   };
@@ -167,8 +192,10 @@ function App() {
   const signInWithApple = async () => {
     const provider = new firebase.auth.OAuthProvider('apple.com');
     try {
+      console.log('🔄 Starting Apple sign-in...');
       await auth.signInWithRedirect(provider);
     } catch (error) {
+      console.error('❌ Sign-in initiation failed:', error);
       alert('Sign in failed: ' + error.message);
     }
   };
