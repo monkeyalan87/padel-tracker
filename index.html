@@ -190,9 +190,24 @@ function App() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
       console.log('🔄 Starting Google sign-in...');
-      await auth.signInWithRedirect(provider);
+      
+      // Try popup first
+      try {
+        await auth.signInWithPopup(provider);
+        console.log('✅ Popup sign-in successful');
+      } catch (popupError) {
+        console.log('⚠️ Popup failed, trying redirect...', popupError.code);
+        // If popup fails, fall back to redirect
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.code === 'auth/cancelled-popup-request') {
+          await auth.signInWithRedirect(provider);
+        } else {
+          throw popupError;
+        }
+      }
     } catch (error) {
-      console.error('❌ Sign-in initiation failed:', error);
+      console.error('❌ Sign-in failed:', error.code, error.message);
       alert('Sign in failed: ' + error.message);
     }
   };
@@ -201,9 +216,24 @@ function App() {
     const provider = new firebase.auth.OAuthProvider('apple.com');
     try {
       console.log('🔄 Starting Apple sign-in...');
-      await auth.signInWithRedirect(provider);
+      
+      // Try popup first
+      try {
+        await auth.signInWithPopup(provider);
+        console.log('✅ Popup sign-in successful');
+      } catch (popupError) {
+        console.log('⚠️ Popup failed, trying redirect...', popupError.code);
+        // If popup fails, fall back to redirect
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.code === 'auth/cancelled-popup-request') {
+          await auth.signInWithRedirect(provider);
+        } else {
+          throw popupError;
+        }
+      }
     } catch (error) {
-      console.error('❌ Sign-in initiation failed:', error);
+      console.error('❌ Sign-in failed:', error.code, error.message);
       alert('Sign in failed: ' + error.message);
     }
   };
