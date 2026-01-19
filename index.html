@@ -576,9 +576,14 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
 
   useEffect(() => { lucide.createIcons(); });
 
-  const filteredMatches = isAdmin ? matches : matches.filter(m => 
-    m.players && m.players.some(p => p.id === userPlayer?.id)
-  );
+  const filteredMatches = isAdmin 
+    ? matches 
+    : matches.filter(m => 
+        // Show if user is in the match
+        (m.players && m.players.some(p => p.id === userPlayer?.id)) ||
+        // OR if it's an open registration match that's upcoming
+        (m.openRegistration && new Date(m.date + ' ' + (m.time || '00:00')) >= new Date())
+      );
 
   const addPlayer = async () => {
     if (playerForm.name.trim()) {
