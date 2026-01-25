@@ -624,13 +624,20 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
 
   const createMatch = async () => {
     // For open registration matches
-    if (newMatch.openRegistration && newMatch.courtFee) {
+    if (newMatch.openRegistration && newMatch.courtFee && newMatch.paymentOrganizer) {
+      const organizer = players.find(p => p.id === newMatch.paymentOrganizer);
+      
       const matchData = {
         ...newMatch,
         courtFee: parseFloat(newMatch.courtFee),
-        players: [],
+        players: [{
+          id: organizer.id,
+          name: organizer.name,
+          paid: true
+        }],
         openRegistration: true,
         maxPlayers: newMatch.maxPlayers,
+        costPerPlayer: 0, // Will be calculated when players join
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       
@@ -2241,6 +2248,26 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate, onC
           </div>
         )}
 
+        {newMatch.openRegistration && newMatch.courtFee && (
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Who is paying for the court upfront?
+            </label>
+            <select
+              value={newMatch.paymentOrganizer || ''}
+              onChange={(e) => setNewMatch({ ...newMatch, paymentOrganizer: e.target.value || null })}
+              className="w-full px-3 py-2 border rounded-lg text-sm">
+              <option value="">Select player...</option>
+              {players.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 This person will be marked as paid when the match is created. Other players will pay them when they join.
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium mb-1">Courts</label>
@@ -2273,6 +2300,33 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate, onC
           </select>
         </div>
 
+        {/* Payment organizer for BOTH open registration AND fixed players */}
+        {newMatch.courtFee && (
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Who paid for the court?
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {players.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setNewMatch({ ...newMatch, paymentOrganizer: p.id })}
+                  className={`p-3 rounded-lg border-2 text-sm ${
+                    newMatch.paymentOrganizer === p.id
+                      ? 'border-green-500 bg-green-50 font-semibold'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                  {p.name}
+                  {newMatch.paymentOrganizer === p.id && ' ✓'}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 This person will be marked as paid, and others will see their payment details
+            </p>
+          </div>
+        )}
+
         {!newMatch.openRegistration && (
           <>
             <div>
@@ -2303,35 +2357,6 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate, onC
                 ))}
               </div>
             </div>
-
-            {newMatch.selectedPlayers.length >= 4 && newMatch.courtFee && (
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Who paid for the court? (Others will pay them £{costPerPlayer})
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {newMatch.selectedPlayers.map(playerId => {
-                    const player = players.find(p => p.id === playerId);
-                    return (
-                      <button
-                        key={playerId}
-                        onClick={() => setNewMatch({ ...newMatch, paymentOrganizer: playerId })}
-                        className={`p-3 rounded-lg border-2 text-sm ${
-                          newMatch.paymentOrganizer === playerId
-                            ? 'border-green-500 bg-green-50 font-semibold'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}>
-                        {player?.name}
-                        {newMatch.paymentOrganizer === playerId && ' ✓'}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  💡 This person will be marked as paid, and others will see their payment details
-                </p>
-              </div>
-            )}
           </>
         )}
 
@@ -2339,7 +2364,7 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate, onC
           <button onClick={onCreate}
             disabled={
               newMatch.openRegistration 
-                ? !newMatch.courtFee
+                ? (!newMatch.courtFee || !newMatch.paymentOrganizer)
                 : (newMatch.selectedPlayers.length < 4 || !newMatch.courtFee || !newMatch.paymentOrganizer)
             }
             className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
