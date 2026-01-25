@@ -848,6 +848,53 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
     }
   };
 
+  const addLocation = async () => {
+    if (!newLocation || !newLocation.trim()) return;
+    
+    const trimmedLocation = newLocation.trim();
+    const currentLocs = locs || [];
+    
+    if (currentLocs.includes(trimmedLocation)) {
+      alert('This location already exists!');
+      return;
+    }
+
+    const updatedLocs = [...currentLocs, trimmedLocation].sort();
+    await db.collection('settings').doc('locations').set({ list: updatedLocs });
+    setNewLocation('');
+  };
+
+  const saveLocationEdit = async (index) => {
+    if (!editLocationValue || !editLocationValue.trim()) return;
+    
+    const trimmedLocation = editLocationValue.trim();
+    const currentLocs = locs || [];
+    
+    if (currentLocs.includes(trimmedLocation) && currentLocs[index] !== trimmedLocation) {
+      alert('This location already exists!');
+      return;
+    }
+
+    const updatedLocs = [...currentLocs];
+    updatedLocs[index] = trimmedLocation;
+    updatedLocs.sort();
+    
+    await db.collection('settings').doc('locations').set({ list: updatedLocs });
+    setEditingLocation(null);
+    setEditLocationValue('');
+  };
+
+  const deleteLocation = async (index) => {
+    const currentLocs = locs || [];
+    const locationName = currentLocs[index];
+    
+    if (!confirm(`Delete location "${locationName}"?`)) return;
+
+    const updatedLocs = currentLocs.filter((_, i) => i !== index);
+    await db.collection('settings').doc('locations').set({ list: updatedLocs });
+  };
+
+
   const showTournamentPointsDialog = (match) => {
     setPendingTournament(match);
     setShowPointsModal(true);
@@ -2458,52 +2505,6 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate, onC
 }
 
 function PlayersView({ players, isAdmin, showNewPlayer, setShowNewPlayer, playerForm, setPlayerForm, editingPlayer, setEditingPlayer, onAddPlayer, onUpdatePlayer }) {
-  const addLocation = async () => {
-    if (!newLocation.trim()) return;
-    
-    const trimmedLocation = newLocation.trim();
-    const currentLocs = locs || [];
-    
-    if (currentLocs.includes(trimmedLocation)) {
-      alert('This location already exists!');
-      return;
-    }
-
-    const updatedLocs = [...currentLocs, trimmedLocation].sort();
-    await db.collection('settings').doc('locations').set({ list: updatedLocs });
-    setNewLocation('');
-  };
-
-  const saveLocationEdit = async (index) => {
-    if (!editLocationValue.trim()) return;
-    
-    const trimmedLocation = editLocationValue.trim();
-    const currentLocs = locs || [];
-    
-    if (currentLocs.includes(trimmedLocation) && currentLocs[index] !== trimmedLocation) {
-      alert('This location already exists!');
-      return;
-    }
-
-    const updatedLocs = [...currentLocs];
-    updatedLocs[index] = trimmedLocation;
-    updatedLocs.sort();
-    
-    await db.collection('settings').doc('locations').set({ list: updatedLocs });
-    setEditingLocation(null);
-    setEditLocationValue('');
-  };
-
-  const deleteLocation = async (index) => {
-    const currentLocs = locs || [];
-    const locationName = currentLocs[index];
-    
-    if (!confirm(`Delete location "${locationName}"?`)) return;
-
-    const updatedLocs = currentLocs.filter((_, i) => i !== index);
-    await db.collection('settings').doc('locations').set({ list: updatedLocs });
-  };
-
   const deletePlayer = async (playerId, playerName) => {
     if (!confirm(`Are you sure you want to delete ${playerName}? This cannot be undone.`)) {
       return;
