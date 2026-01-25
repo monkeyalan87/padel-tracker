@@ -1247,7 +1247,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
                     return (
                       <div key={m.id} className="border rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <div>
+                          <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-sm">{new Date(m.date).toLocaleDateString('en-GB')}</span>
                               <span className={`px-2 py-0.5 text-xs rounded-full ${
@@ -1260,6 +1260,18 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
                               <p className="text-xs text-gray-500">⏱️ {m.startTime} - {m.endTime}</p>
                             )}
                           </div>
+                          {isAdmin && (
+                            <button 
+                              onClick={async () => {
+                                if (confirm('Delete this match from history?')) {
+                                  await db.collection('matches').doc(m.id).delete();
+                                }
+                              }}
+                              className="text-gray-400 hover:text-red-500 p-1"
+                              title="Delete match">
+                              <Icon name="trash-2" />
+                            </button>
+                          )}
                         </div>
 
                         <div className="text-xs text-gray-600 mb-2">
