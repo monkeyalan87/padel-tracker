@@ -545,6 +545,9 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [showNewMatch, setShowNewMatch] = useState(false);
   const [editingMatch, setEditingMatch] = useState(null);
+  const [newLocation, setNewLocation] = useState('');
+  const [editingLocation, setEditingLocation] = useState(null);
+  const [editLocationValue, setEditLocationValue] = useState('');
   const [showNewPlayer, setShowNewPlayer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerForm, setPlayerForm] = useState({ name: '', paypalLink: '', revolutLink: '', sortCode: '', accountNumber: '', email: '' });
@@ -1338,17 +1341,108 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
         )}
 
         {view === 'admin' && isAdmin && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold mb-4">Admin Panel</h2>
-            <div className="space-y-4">
-              <div className="p-4 border rounded-lg">
-                <h3 className="font-semibold mb-2">Quick Stats</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>Total Players: <strong>{players.length}</strong></div>
-                  <div>Total Matches: <strong>{matches.length}</strong></div>
-                  <div>Revenue: <strong>£{totalRev.toFixed(2)}</strong></div>
-                  <div>Collected: <strong>£{totalCol.toFixed(2)}</strong></div>
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold mb-4">Admin Panel</h2>
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Quick Stats</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>Total Players: <strong>{players.length}</strong></div>
+                    <div>Total Matches: <strong>{matches.length}</strong></div>
+                    <div>Revenue: <strong>£{totalRev.toFixed(2)}</strong></div>
+                    <div>Collected: <strong>£{totalCol.toFixed(2)}</strong></div>
+                  </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Location Management */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-bold mb-4">📍 Manage Locations</h3>
+              
+              {/* Add New Location */}
+              <div className="mb-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter new location..."
+                    value={newLocation}
+                    onChange={(e) => setNewLocation(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && newLocation.trim()) {
+                        addLocation();
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                  />
+                  <button
+                    onClick={addLocation}
+                    disabled={!newLocation.trim()}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Locations */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Existing Locations ({locs.length})</h4>
+                {locs.map((loc, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50">
+                    {editingLocation === idx ? (
+                      <>
+                        <input
+                          type="text"
+                          value={editLocationValue}
+                          onChange={(e) => setEditLocationValue(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              saveLocationEdit(idx);
+                            }
+                          }}
+                          className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => saveLocationEdit(idx)}
+                          className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingLocation(null);
+                            setEditLocationValue('');
+                          }}
+                          className="px-3 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 text-sm">
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex-1 text-sm">{loc}</span>
+                        <button
+                          onClick={() => {
+                            setEditingLocation(idx);
+                            setEditLocationValue(loc);
+                          }}
+                          className="text-indigo-600 hover:text-indigo-800 p-1"
+                          title="Edit location">
+                          <Icon name="edit" />
+                        </button>
+                        <button
+                          onClick={() => deleteLocation(idx)}
+                          className="text-red-600 hover:text-red-800 p-1"
+                          title="Delete location">
+                          <Icon name="trash-2" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {locs.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-4">No locations yet. Add one above!</p>
+                )}
               </div>
             </div>
           </div>
@@ -2354,6 +2448,46 @@ function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate, onC
 }
 
 function PlayersView({ players, isAdmin, showNewPlayer, setShowNewPlayer, playerForm, setPlayerForm, editingPlayer, setEditingPlayer, onAddPlayer, onUpdatePlayer }) {
+  const addLocation = async () => {
+    if (!newLocation.trim()) return;
+    
+    const trimmedLocation = newLocation.trim();
+    if (locs.includes(trimmedLocation)) {
+      alert('This location already exists!');
+      return;
+    }
+
+    const updatedLocs = [...locs, trimmedLocation].sort();
+    await db.collection('settings').doc('locations').set({ list: updatedLocs });
+    setNewLocation('');
+  };
+
+  const saveLocationEdit = async (index) => {
+    if (!editLocationValue.trim()) return;
+    
+    const trimmedLocation = editLocationValue.trim();
+    if (locs.includes(trimmedLocation) && locs[index] !== trimmedLocation) {
+      alert('This location already exists!');
+      return;
+    }
+
+    const updatedLocs = [...locs];
+    updatedLocs[index] = trimmedLocation;
+    updatedLocs.sort();
+    
+    await db.collection('settings').doc('locations').set({ list: updatedLocs });
+    setEditingLocation(null);
+    setEditLocationValue('');
+  };
+
+  const deleteLocation = async (index) => {
+    const locationName = locs[index];
+    if (!confirm(`Delete location "${locationName}"?`)) return;
+
+    const updatedLocs = locs.filter((_, i) => i !== index);
+    await db.collection('settings').doc('locations').set({ list: updatedLocs });
+  };
+
   const deletePlayer = async (playerId, playerName) => {
     if (!confirm(`Are you sure you want to delete ${playerName}? This cannot be undone.`)) {
       return;
