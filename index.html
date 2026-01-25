@@ -849,7 +849,13 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   };
 
   const addLocation = async () => {
-    if (!newLocation || !newLocation.trim()) return;
+    console.log('🏢 Add location called, newLocation:', newLocation);
+    console.log('🏢 Current locs:', locs);
+    
+    if (!newLocation || !newLocation.trim()) {
+      console.log('❌ Location is empty');
+      return;
+    }
     
     const trimmedLocation = newLocation.trim();
     const currentLocs = locs || [];
@@ -859,13 +865,26 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
       return;
     }
 
+    console.log('✅ Saving location to Firebase:', trimmedLocation);
     const updatedLocs = [...currentLocs, trimmedLocation].sort();
-    await db.collection('settings').doc('locations').set({ list: updatedLocs });
-    setNewLocation('');
+    
+    try {
+      await db.collection('settings').doc('locations').set({ list: updatedLocs });
+      console.log('✅ Location saved successfully');
+      setNewLocation('');
+    } catch (error) {
+      console.error('❌ Error saving location:', error);
+      alert('Failed to save location: ' + error.message);
+    }
   };
 
   const saveLocationEdit = async (index) => {
-    if (!editLocationValue || !editLocationValue.trim()) return;
+    console.log('✏️ Save edit called, index:', index, 'value:', editLocationValue);
+    
+    if (!editLocationValue || !editLocationValue.trim()) {
+      console.log('❌ Edit value is empty');
+      return;
+    }
     
     const trimmedLocation = editLocationValue.trim();
     const currentLocs = locs || [];
@@ -879,19 +898,38 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
     updatedLocs[index] = trimmedLocation;
     updatedLocs.sort();
     
-    await db.collection('settings').doc('locations').set({ list: updatedLocs });
-    setEditingLocation(null);
-    setEditLocationValue('');
+    console.log('✅ Saving edited location:', updatedLocs);
+    
+    try {
+      await db.collection('settings').doc('locations').set({ list: updatedLocs });
+      console.log('✅ Location edited successfully');
+      setEditingLocation(null);
+      setEditLocationValue('');
+    } catch (error) {
+      console.error('❌ Error editing location:', error);
+      alert('Failed to edit location: ' + error.message);
+    }
   };
 
   const deleteLocation = async (index) => {
     const currentLocs = locs || [];
     const locationName = currentLocs[index];
     
+    console.log('🗑️ Delete location called:', locationName);
+    
     if (!confirm(`Delete location "${locationName}"?`)) return;
 
     const updatedLocs = currentLocs.filter((_, i) => i !== index);
-    await db.collection('settings').doc('locations').set({ list: updatedLocs });
+    
+    console.log('✅ Deleting location, new list:', updatedLocs);
+    
+    try {
+      await db.collection('settings').doc('locations').set({ list: updatedLocs });
+      console.log('✅ Location deleted successfully');
+    } catch (error) {
+      console.error('❌ Error deleting location:', error);
+      alert('Failed to delete location: ' + error.message);
+    }
   };
 
 
