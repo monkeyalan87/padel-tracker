@@ -826,7 +826,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
 
     const tournamentData = {
       date: new Date().toISOString().split('T')[0],
-      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      time: '23:59', // Set to end of day so it doesn't immediately become past
       format: quickTournament.format,
       location: quickTournament.location,
       courts: 1,
