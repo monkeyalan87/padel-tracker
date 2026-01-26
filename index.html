@@ -548,8 +548,10 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   const [quickTournament, setQuickTournament] = useState({
     format: 'americano',
     selectedPlayers: [],
+    guestPlayers: [],
     location: ''
   });
+  const [guestPlayerName, setGuestPlayerName] = useState('');
   const [showNewPlayer, setShowNewPlayer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerForm, setPlayerForm] = useState({ name: '', paypalLink: '', revolutLink: '', sortCode: '', accountNumber: '', email: '' });
@@ -799,10 +801,28 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   };
 
   const createQuickTournament = async () => {
-    if (quickTournament.selectedPlayers.length < 4) {
+    const totalPlayers = quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length;
+    
+    if (totalPlayers < 4) {
       alert('Need at least 4 players for a tournament');
       return;
     }
+
+    // Create player objects for registered players
+    const registeredPlayers = quickTournament.selectedPlayers.map(id => {
+      const player = players.find(p => p.id === id);
+      return { id, name: player.name, paid: true };
+    });
+
+    // Create player objects for guest players (use temporary IDs)
+    const guestPlayerObjects = quickTournament.guestPlayers.map((name, idx) => ({
+      id: `guest_${Date.now()}_${idx}`,
+      name: name,
+      paid: true,
+      isGuest: true
+    }));
+
+    const allPlayers = [...registeredPlayers, ...guestPlayerObjects];
 
     const tournamentData = {
       date: new Date().toISOString().split('T')[0],
@@ -812,10 +832,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
       courts: 1,
       courtFee: 0,
       costPerPlayer: 0,
-      players: quickTournament.selectedPlayers.map(id => {
-        const player = players.find(p => p.id === id);
-        return { id, name: player.name, paid: true };
-      }),
+      players: allPlayers,
       openRegistration: false,
       tournamentStarted: false,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -827,8 +844,10 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
     setQuickTournament({
       format: 'americano',
       selectedPlayers: [],
+      guestPlayers: [],
       location: ''
     });
+    setGuestPlayerName('');
     
     alert('Tournament created! Go to Matches tab to start it.');
   };
@@ -1218,24 +1237,97 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
                     </button>
                   ))}
                 </div>
-                {quickTournament.selectedPlayers.length > 0 && quickTournament.selectedPlayers.length < 4 && (
+                {(quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length) > 0 && (quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length) < 4 && (
                   <p className="text-xs text-orange-600 mt-2">
-                    ⚠️ Need at least 4 players (currently {quickTournament.selectedPlayers.length})
+                    ⚠️ Need at least 4 total players (currently {quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length})
                   </p>
                 )}
               </div>
 
-              {/* Selected Players List */}
-              {quickTournament.selectedPlayers.length > 0 && (
+              {/* Guest Players */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Add Guest Players (Not Registered)
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    placeholder="Guest player name..."
+                    value={guestPlayerName}
+                    onChange={(e) => setGuestPlayerName(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && guestPlayerName.trim()) {
+                        setQuickTournament({
+                          ...quickTournament,
+                          guestPlayers: [...quickTournament.guestPlayers, guestPlayerName.trim()]
+                        });
+                        setGuestPlayerName('');
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      if (guestPlayerName.trim()) {
+                        setQuickTournament({
+                          ...quickTournament,
+                          guestPlayers: [...quickTournament.guestPlayers, guestPlayerName.trim()]
+                        });
+                        setGuestPlayerName('');
+                      }
+                    }}
+                    disabled={!guestPlayerName.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm">
+                    Add
+                  </button>
+                </div>
+                
+                {quickTournament.guestPlayers.length > 0 && (
+                  <div className="space-y-2 p-2 bg-gray-50 border rounded-lg">
+                    {quickTournament.guestPlayers.map((name, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border">
+                        <span className="text-sm">
+                          <span className="text-gray-400 mr-2">👤</span>
+                          {name}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setQuickTournament({
+                              ...quickTournament,
+                              guestPlayers: quickTournament.guestPlayers.filter((_, i) => i !== idx)
+                            });
+                          }}
+                          className="text-red-600 hover:text-red-800 text-xs">
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Total Players Summary */}
+              {(quickTournament.selectedPlayers.length > 0 || quickTournament.guestPlayers.length > 0) && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="text-sm font-semibold text-blue-900 mb-2">
-                    Selected Players ({quickTournament.selectedPlayers.length}):
+                    Total Players ({quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length}):
                   </div>
-                  <div className="text-xs text-blue-700">
-                    {quickTournament.selectedPlayers.map(id => {
-                      const player = players.find(p => p.id === id);
-                      return player?.name;
-                    }).join(', ')}
+                  <div className="text-xs text-blue-700 space-y-1">
+                    {quickTournament.selectedPlayers.length > 0 && (
+                      <div>
+                        <span className="font-semibold">Registered:</span>{' '}
+                        {quickTournament.selectedPlayers.map(id => {
+                          const player = players.find(p => p.id === id);
+                          return player?.name;
+                        }).join(', ')}
+                      </div>
+                    )}
+                    {quickTournament.guestPlayers.length > 0 && (
+                      <div>
+                        <span className="font-semibold">Guests:</span>{' '}
+                        {quickTournament.guestPlayers.join(', ')}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1243,7 +1335,7 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
               {/* Create Button */}
               <button
                 onClick={createQuickTournament}
-                disabled={quickTournament.selectedPlayers.length < 4}
+                disabled={(quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length) < 4}
                 className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
                 Create Tournament Now
               </button>
