@@ -545,6 +545,11 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [showNewMatch, setShowNewMatch] = useState(false);
   const [editingMatch, setEditingMatch] = useState(null);
+  const [quickTournament, setQuickTournament] = useState({
+    format: 'americano',
+    selectedPlayers: [],
+    location: ''
+  });
   const [showNewPlayer, setShowNewPlayer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerForm, setPlayerForm] = useState({ name: '', paypalLink: '', revolutLink: '', sortCode: '', accountNumber: '', email: '' });
@@ -791,6 +796,41 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
       p.id === playerId ? { ...p, paid: !p.paid } : p
     );
     await db.collection('matches').doc(matchId).update({ players: updatedPlayers });
+  };
+
+  const createQuickTournament = async () => {
+    if (quickTournament.selectedPlayers.length < 4) {
+      alert('Need at least 4 players for a tournament');
+      return;
+    }
+
+    const tournamentData = {
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      format: quickTournament.format,
+      location: quickTournament.location,
+      courts: 1,
+      courtFee: 0,
+      costPerPlayer: 0,
+      players: quickTournament.selectedPlayers.map(id => {
+        const player = players.find(p => p.id === id);
+        return { id, name: player.name, paid: true };
+      }),
+      openRegistration: false,
+      tournamentStarted: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    await db.collection('matches').add(tournamentData);
+    
+    // Reset form
+    setQuickTournament({
+      format: 'americano',
+      selectedPlayers: [],
+      location: ''
+    });
+    
+    alert('Tournament created! Go to Matches tab to start it.');
   };
 
   const joinMatch = async (matchId, playerId = null) => {
@@ -1040,8 +1080,8 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-4">
-        <div className="bg-white rounded-lg shadow-sm p-1 grid grid-cols-4 gap-1">
-          {['matches', 'stats', 'admin', 'players'].map(tab => (
+        <div className="bg-white rounded-lg shadow-sm p-1 grid grid-cols-5 gap-1">
+          {['matches', 'tournament', 'stats', 'admin', 'players'].map(tab => (
             <button key={tab} onClick={() => setView(tab)}
               className={`py-2 px-2 rounded-md text-xs font-medium ${
                 view === tab ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
@@ -1101,6 +1141,117 @@ function MainApp({ user, userPlayer, isAdmin, onLogout }) {
                 isEditing={!!editingMatch}
               />
             )}
+          </div>
+        )}
+
+        {view === 'tournament' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-bold mb-4">🏆 Quick Tournament</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Create an instant Americano or Mexicano tournament - no scheduling needed!
+            </p>
+
+            <div className="space-y-4">
+              {/* Format Selection */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Tournament Format</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setQuickTournament({ ...quickTournament, format: 'americano' })}
+                    className={`p-4 rounded-lg border-2 ${
+                      quickTournament.format === 'americano' 
+                        ? 'border-purple-500 bg-purple-50' 
+                        : 'border-gray-200'
+                    }`}>
+                    <div className="font-semibold text-purple-700">Americano</div>
+                    <div className="text-xs text-gray-600 mt-1">Round-robin pairs</div>
+                  </button>
+                  <button 
+                    onClick={() => setQuickTournament({ ...quickTournament, format: 'mexicano' })}
+                    className={`p-4 rounded-lg border-2 ${
+                      quickTournament.format === 'mexicano' 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-200'
+                    }`}>
+                    <div className="font-semibold text-green-700">Mexicano</div>
+                    <div className="text-xs text-gray-600 mt-1">Score-based pairing</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Location (Optional)</label>
+                <select 
+                  value={quickTournament.location} 
+                  onChange={(e) => setQuickTournament({ ...quickTournament, location: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg">
+                  <option value="">Select location...</option>
+                  {locs.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                </select>
+              </div>
+
+              {/* Player Selection */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Select Players ({quickTournament.selectedPlayers.length} selected)
+                </label>
+                <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg">
+                  {players.map(p => (
+                    <button 
+                      key={p.id}
+                      onClick={() => {
+                        const selected = quickTournament.selectedPlayers.includes(p.id);
+                        setQuickTournament({
+                          ...quickTournament,
+                          selectedPlayers: selected 
+                            ? quickTournament.selectedPlayers.filter(id => id !== p.id)
+                            : [...quickTournament.selectedPlayers, p.id]
+                        });
+                      }}
+                      className={`p-3 text-sm rounded-lg border-2 ${
+                        quickTournament.selectedPlayers.includes(p.id) 
+                          ? 'border-indigo-500 bg-indigo-50 font-semibold' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+                {quickTournament.selectedPlayers.length > 0 && quickTournament.selectedPlayers.length < 4 && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    ⚠️ Need at least 4 players (currently {quickTournament.selectedPlayers.length})
+                  </p>
+                )}
+              </div>
+
+              {/* Selected Players List */}
+              {quickTournament.selectedPlayers.length > 0 && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-sm font-semibold text-blue-900 mb-2">
+                    Selected Players ({quickTournament.selectedPlayers.length}):
+                  </div>
+                  <div className="text-xs text-blue-700">
+                    {quickTournament.selectedPlayers.map(id => {
+                      const player = players.find(p => p.id === id);
+                      return player?.name;
+                    }).join(', ')}
+                  </div>
+                </div>
+              )}
+
+              {/* Create Button */}
+              <button
+                onClick={createQuickTournament}
+                disabled={quickTournament.selectedPlayers.length < 4}
+                className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
+                Create Tournament Now
+              </button>
+
+              <p className="text-xs text-gray-500 text-center">
+                💡 Tournament will appear in the Matches tab where you can start it
+              </p>
+            </div>
           </div>
         )}
 
