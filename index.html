@@ -2406,7 +2406,7 @@ function PlayersView({ players, isAdmin, showNewPlayer, setShowNewPlayer, player
           <div className="flex justify-between items-start">
             <div className="flex-1">
               <h3 className="font-semibold">{p.name}</h3>
-              {p.email && <p className="text-xs text-gray-500">📧 {p.email}</p>}
+              {isAdmin && p.email && <p className="text-xs text-gray-500">📧 {p.email}</p>}
             </div>
             {isAdmin && (
               <div className="flex gap-2">
