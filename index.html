@@ -2251,8 +2251,16 @@ function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRoun
           
           <div className="space-y-3">
             {currentRound.matches.map((m, idx) => {
-              const team1Names = m.team1.map(id => players.find(p => p.id === id)?.name || '?');
-              const team2Names = m.team2.map(id => players.find(p => p.id === id)?.name || '?');
+              // Look up names from match.players (includes guests) OR registered players
+              const allMatchPlayers = [...(match.players || []), ...players];
+              const team1Names = m.team1.map(id => {
+                const player = allMatchPlayers.find(p => p.id === id);
+                return player?.name || '?';
+              });
+              const team2Names = m.team2.map(id => {
+                const player = allMatchPlayers.find(p => p.id === id);
+                return player?.name || '?';
+              });
               const hasScores = m.score.team1 && m.score.team2;
               const showQuickPicker = isAdmin && selectedMatch === idx;
               
