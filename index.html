@@ -3,2771 +3,1650 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- FORCE NO CACHE - VERSION 2.1 - 2025-01-19 -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <!-- END CACHE CONTROL -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Padel Tracker">
-    <meta name="theme-color" content="#4F46E5">
-    <title>Padel Tracker v2.1</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <title>Ace Padel Club - League Manager</title>
+    <link rel="manifest" href="ace-manifest.json">
+    <meta name="theme-color" content="#1a1a1a">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+    <style>
+        :root {
+            --ace-gold: #d4af37;
+            --ace-dark: #1a1a1a;
+            --ace-darker: #0d0d0d;
+            --ace-light: #f5f5f5;
+            --ace-grey: #6b6b6b;
+            --ace-border: #333333;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --shadow-gold: 0 0 30px rgba(212, 175, 55, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background: var(--ace-darker);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 20px 50px;
+            position: relative;
+            border-bottom: 1px solid var(--ace-border);
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--ace-gold);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 400;
+        }
+
+        .card {
+            background: var(--ace-dark);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--ace-border);
+            box-shadow: var(--shadow-gold);
+        }
+
+        .card h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--ace-gold);
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: var(--ace-dark);
+            border: 2px solid var(--ace-border);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+
+        .tab:hover {
+            border-color: var(--ace-gold);
+            color: var(--ace-gold);
+        }
+
+        .tab.active {
+            background: var(--ace-gold);
+            color: var(--ace-darker);
+            border-color: var(--ace-gold);
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: var(--ace-gold);
+            color: var(--ace-darker);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--ace-gold);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: var(--ace-darker);
+            border: 1px solid var(--ace-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--ace-gold);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            min-width: 600px; /* Ensures table doesn't squish on mobile */
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--ace-border);
+            white-space: nowrap; /* Prevent text wrapping in table cells */
+        }
+
+        th {
+            background: var(--ace-darker);
+            color: var(--ace-gold);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        /* Make team names wrap on very small screens */
+        @media (max-width: 480px) {
+            th:nth-child(2), td:nth-child(2) {
+                white-space: normal;
+                min-width: 120px;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+                font-size: 0.9rem;
+            }
+        }
+
+        tr:hover {
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .fixture {
+            background: var(--ace-darker);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--ace-border);
+        }
+
+        .fixture-teams {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .fixture-team {
+            flex: 1;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .vs {
+            padding: 0 20px;
+            color: var(--ace-gold);
+            font-weight: 700;
+        }
+
+        .fixture-date {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-email {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .btn-logout {
+            padding: 8px 20px;
+            background: transparent;
+            border: 1px solid var(--ace-border);
+            color: var(--text-secondary);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            border-color: var(--ace-gold);
+            color: var(--ace-gold);
+        }
+
+        .team-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            background: var(--ace-gold);
+            color: var(--ace-darker);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+
+        .submit-score-section {
+            background: var(--ace-darker);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border: 2px solid var(--ace-gold);
+        }
+
+        .score-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                width: 100%;
+            }
+            
+            .user-info {
+                position: static;
+                justify-content: center;
+                margin-top: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
+
     <script type="text/babel">
-const { useState, useEffect } = React;
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDog2f8jYrxm7J19h6QOtTUsuDgiNUmtSU",
-  authDomain: "padel-tracker-uk.firebaseapp.com",
-  projectId: "padel-tracker-uk",
-  storageBucket: "padel-tracker-uk.firebasestorage.app",
-  messagingSenderId: "557326239556",
-  appId: "1:557326239556:web:4bb796309b0eac6697f911"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-
-// Set persistence to LOCAL so auth state survives page refreshes and redirects
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-
-function Icon({ name }) {
-  useEffect(() => { lucide.createIcons(); });
-  return React.createElement('i', { 'data-lucide': name });
-}
-
-// Tournament Algorithms
-function generateAmericanoPairings(playerIds, numCourts) {
-  const n = playerIds.length;
-  if (n < 4 || n % 2 !== 0) return null;
-  
-  const rounds = [];
-  const numRounds = n - 1;
-  const players = [...playerIds];
-  
-  for (let round = 0; round < numRounds; round++) {
-    const roundMatches = [];
-    const matchesPerRound = Math.floor(n / 4);
-    
-    for (let i = 0; i < matchesPerRound; i++) {
-      const team1Player1 = players[i * 2];
-      const team1Player2 = players[n - 1 - (i * 2)];
-      const team2Player1 = players[i * 2 + 1];
-      const team2Player2 = players[n - 2 - (i * 2)];
-      
-      roundMatches.push({
-        court: (i % numCourts) + 1,
-        team1: [team1Player1, team1Player2],
-        team2: [team2Player1, team2Player2],
-        score: { team1: '', team2: '' }
-      });
-    }
-    
-    rounds.push({ number: round + 1, matches: roundMatches, completed: false });
-    
-    const lastPlayer = players.pop();
-    players.splice(1, 0, lastPlayer);
-  }
-  
-  return rounds;
-}
-
-function generateMexicanoRound(playerIds, numCourts, currentStandings = null) {
-  const n = playerIds.length;
-  if (n < 4 || n % 2 !== 0) return null;
-  
-  let orderedPlayers;
-  
-  if (!currentStandings) {
-    orderedPlayers = [...playerIds].sort(() => Math.random() - 0.5);
-  } else {
-    orderedPlayers = [...currentStandings].sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      return b.gamesWon - a.gamesWon;
-    }).map(p => p.id);
-  }
-  
-  const roundMatches = [];
-  const matchesPerRound = Math.floor(n / 4);
-  
-  for (let i = 0; i < matchesPerRound; i++) {
-    const baseIdx = i * 4;
-    roundMatches.push({
-      court: (i % numCourts) + 1,
-      team1: [orderedPlayers[baseIdx], orderedPlayers[baseIdx + 3]],
-      team2: [orderedPlayers[baseIdx + 1], orderedPlayers[baseIdx + 2]],
-      score: { team1: '', team2: '' }
-    });
-  }
-  
-  return roundMatches;
-}
-
-function App() {
-  const [user, setUser] = useState(null);
-  const [userPlayer, setUserPlayer] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [linkingEmail, setLinkingEmail] = useState(null);
-  
-  const ADMIN_EMAILS = ['edavies87@gmail.com'];
-
-  useEffect(() => {
-    let mounted = true;
-
-    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
-      if (!mounted) return;
-      
-      console.log('👤 Auth state changed:', currentUser?.email || 'Not signed in');
-      
-      if (currentUser) {
-        console.log('✅ User is signed in:', currentUser.email);
-        setUser(currentUser);
-        
-        if (ADMIN_EMAILS.includes(currentUser.email)) {
-          console.log('👑 Admin detected');
-          setIsAdmin(true);
-          setUserPlayer(null);
-          setLoading(false);
-        } else {
-          console.log('🔍 Checking for player profile...');
-          const playerSnap = await db.collection('players').where('email', '==', currentUser.email).get();
-          if (!playerSnap.empty) {
-            const playerData = { id: playerSnap.docs[0].id, ...playerSnap.docs[0].data() };
-            console.log('✅ Player found:', playerData.name);
-            setUserPlayer(playerData);
-            setIsAdmin(false);
-            setLoading(false);
-          } else {
-            console.log('📝 New user - showing registration');
-            setLinkingEmail(currentUser.email);
-            setUser(currentUser);
-            setLoading(false);
-          }
-        }
-      } else {
-        console.log('👋 No user signed in');
-        setUser(null);
-        setIsAdmin(false);
-        setUserPlayer(null);
-        setLoading(false);
-      }
-    });
-
-    // Handle redirect result after sign-in
-    auth.getRedirectResult().then((result) => {
-      if (result && result.user) {
-        console.log('✅ Redirect result - user signed in:', result.user.email);
-      } else {
-        console.log('ℹ️ No redirect result (normal page load)');
-      }
-    }).catch((error) => {
-      console.error('❌ Redirect error:', error.code, error.message);
-      if (error.code !== 'auth/popup-closed-by-user') {
-        alert('Sign in failed: ' + error.message);
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      unsubscribe();
-    };
-  }, []);
-
-  const signInWithGoogle = async () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    try {
-      console.log('🔄 Starting Google sign-in...');
-      
-      // Try popup first
-      try {
-        await auth.signInWithPopup(provider);
-        console.log('✅ Popup sign-in successful');
-      } catch (popupError) {
-        console.log('⚠️ Popup failed, trying redirect...', popupError.code);
-        // If popup fails, fall back to redirect
-        if (popupError.code === 'auth/popup-blocked' || 
-            popupError.code === 'auth/popup-closed-by-user' ||
-            popupError.code === 'auth/cancelled-popup-request') {
-          await auth.signInWithRedirect(provider);
-        } else {
-          throw popupError;
-        }
-      }
-    } catch (error) {
-      console.error('❌ Sign-in failed:', error.code, error.message);
-      alert('Sign in failed: ' + error.message);
-    }
-  };
-
-  const signInWithApple = async () => {
-    const provider = new firebase.auth.OAuthProvider('apple.com');
-    try {
-      console.log('🔄 Starting Apple sign-in...');
-      
-      // Try popup first
-      try {
-        await auth.signInWithPopup(provider);
-        console.log('✅ Popup sign-in successful');
-      } catch (popupError) {
-        console.log('⚠️ Popup failed, trying redirect...', popupError.code);
-        // If popup fails, fall back to redirect
-        if (popupError.code === 'auth/popup-blocked' || 
-            popupError.code === 'auth/popup-closed-by-user' ||
-            popupError.code === 'auth/cancelled-popup-request') {
-          await auth.signInWithRedirect(provider);
-        } else {
-          throw popupError;
-        }
-      }
-    } catch (error) {
-      console.error('❌ Sign-in failed:', error.code, error.message);
-      alert('Sign in failed: ' + error.message);
-    }
-  };
-
-  const logout = async () => {
-    console.log('🚪 LOGOUT CALLED - User manually signing out');
-    console.trace('Logout stack trace:');
-    await auth.signOut();
-    setIsAdmin(false);
-    setUserPlayer(null);
-  };
-
-  const linkPlayerToEmail = async (playerId) => {
-    await db.collection('players').doc(playerId).update({
-      email: user.email,
-      linkedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    const playerDoc = await db.collection('players').doc(playerId).get();
-    setUserPlayer({ id: playerId, ...playerDoc.data() });
-    setLinkingEmail(null);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-6xl">🎾</div>
-      </div>
-    );
-  }
-
-  if (linkingEmail && !isAdmin) {
-    return <RegistrationScreen user={user} onLogout={logout} />;
-  }
-
-  if (!user && !isAdmin) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
-          <div className="text-center mb-8">
-            <div className="text-6xl mb-4">🎾</div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Padel Tracker</h1>
-            <p className="text-gray-600">Sign in to manage your matches</p>
-          </div>
-
-          <div className="space-y-3">
-            <button onClick={signInWithGoogle}
-              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 py-3 rounded-lg hover:bg-gray-50">
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Sign in with Google
-            </button>
-
-            <button onClick={signInWithApple}
-              className="w-full flex items-center justify-center gap-3 bg-black text-white py-3 rounded-lg hover:bg-gray-900">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-              </svg>
-              Sign in with Apple
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return <MainApp user={user} userPlayer={userPlayer} isAdmin={isAdmin} onLogout={logout} />;
-}
-
-function RegistrationScreen({ user, onLogout }) {
-  const [view, setView] = useState('choice'); // 'choice', 'register', 'link'
-  const [players, setPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [registrationForm, setRegistrationForm] = useState({
-    name: '',
-    paypalLink: '',
-    revolutLink: '',
-    sortCode: '',
-    accountNumber: ''
-  });
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    db.collection('players').orderBy('name').get().then(snapshot => {
-      const playerData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPlayers(playerData.filter(p => !p.email));
-      setLoading(false);
-    });
-  }, []);
-
-  const registerNewPlayer = async () => {
-    if (!registrationForm.name.trim()) {
-      alert('Please enter your name');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await db.collection('players').add({
-        name: registrationForm.name.trim(),
-        email: user.email,
-        paypalLink: registrationForm.paypalLink.trim(),
-        revolutLink: registrationForm.revolutLink.trim(),
-        sortCode: registrationForm.sortCode.trim(),
-        accountNumber: registrationForm.accountNumber.trim(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        linkedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      
-      // Reload the page to trigger re-authentication
-      window.location.reload();
-    } catch (error) {
-      alert('Registration failed: ' + error.message);
-      setSubmitting(false);
-    }
-  };
-
-  const linkToExistingPlayer = async (playerId) => {
-    setSubmitting(true);
-    try {
-      await db.collection('players').doc(playerId).update({
-        email: user.email,
-        linkedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      
-      // Reload the page to trigger re-authentication
-      window.location.reload();
-    } catch (error) {
-      alert('Linking failed: ' + error.message);
-      setSubmitting(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-6xl">🎾</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-      <div className="max-w-md mx-auto mt-8">
-        <div className="bg-white rounded-lg shadow-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">Welcome to Padel Tracker</h2>
-            <button onClick={onLogout} className="text-gray-600 hover:text-gray-900">
-              <Icon name="log-out" />
-            </button>
-          </div>
-          
-          <div className="mb-6 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              Signed in as: <strong>{user.email}</strong>
-            </p>
-          </div>
-
-          {view === 'choice' && (
-            <div className="space-y-4">
-              <p className="text-gray-700 mb-4">
-                We don't have a player profile for this email. Would you like to:
-              </p>
-
-              <button
-                onClick={() => setView('register')}
-                className="w-full p-4 border-2 border-indigo-600 rounded-lg hover:bg-indigo-50 text-left">
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">✨</div>
-                  <div>
-                    <div className="font-semibold text-indigo-900">Create New Profile</div>
-                    <div className="text-sm text-gray-600">Register as a new player</div>
-                  </div>
-                </div>
-              </button>
-
-              {players.length > 0 && (
-                <button
-                  onClick={() => setView('link')}
-                  className="w-full p-4 border-2 border-gray-300 rounded-lg hover:bg-gray-50 text-left">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">🔗</div>
-                    <div>
-                      <div className="font-semibold text-gray-900">Link Existing Profile</div>
-                      <div className="text-sm text-gray-600">Connect to a profile created by admin</div>
-                    </div>
-                  </div>
-                </button>
-              )}
-            </div>
-          )}
-
-          {view === 'register' && (
-            <div className="space-y-4">
-              <button
-                onClick={() => setView('choice')}
-                className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-2">
-                <Icon name="arrow-left" /> Back
-              </button>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Full Name *</label>
-                <input
-                  type="text"
-                  value={registrationForm.name}
-                  onChange={(e) => setRegistrationForm({ ...registrationForm, name: e.target.value })}
-                  placeholder="Enter your name"
-                  className="w-full px-3 py-2 border rounded-lg"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">PayPal Link (optional)</label>
-                <input
-                  type="url"
-                  value={registrationForm.paypalLink}
-                  onChange={(e) => setRegistrationForm({ ...registrationForm, paypalLink: e.target.value })}
-                  placeholder="https://paypal.me/yourname"
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-                <p className="text-xs text-gray-500 mt-1">For other players to pay you</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Revolut Link (optional)</label>
-                <input
-                  type="url"
-                  value={registrationForm.revolutLink}
-                  onChange={(e) => setRegistrationForm({ ...registrationForm, revolutLink: e.target.value })}
-                  placeholder="https://revolut.me/yourname"
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Bank Details (optional)</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    value={registrationForm.sortCode}
-                    onChange={(e) => setRegistrationForm({ ...registrationForm, sortCode: e.target.value })}
-                    placeholder="Sort code (e.g., 12-34-56)"
-                    className="w-full px-3 py-2 border rounded-lg text-sm"
-                  />
-                  <input
-                    type="text"
-                    value={registrationForm.accountNumber}
-                    onChange={(e) => setRegistrationForm({ ...registrationForm, accountNumber: e.target.value })}
-                    placeholder="Account number"
-                    className="w-full px-3 py-2 border rounded-lg text-sm"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={registerNewPlayer}
-                disabled={submitting || !registrationForm.name.trim()}
-                className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
-                {submitting ? 'Creating Profile...' : 'Create Profile'}
-              </button>
-            </div>
-          )}
-
-          {view === 'link' && (
-            <div className="space-y-4">
-              <button
-                onClick={() => setView('choice')}
-                className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-2">
-                <Icon name="arrow-left" /> Back
-              </button>
-
-              <p className="text-sm text-gray-600 mb-4">
-                Select your existing player profile to link it to this account:
-              </p>
-
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {players.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => linkToExistingPlayer(p.id)}
-                    disabled={submitting}
-                    className="w-full p-3 text-left border-2 rounded-lg hover:bg-indigo-50 hover:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <div className="font-medium">{p.name}</div>
-                  </button>
-                ))}
-              </div>
-
-              {players.length === 0 && (
-                <p className="text-center text-gray-500 py-8">
-                  No unlinked players found. Please create a new profile instead.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MainApp({ user, userPlayer, isAdmin, onLogout }) {
-  const [view, setView] = useState('matches');
-  const [players, setPlayers] = useState([]);
-  const [matches, setMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showNewMatch, setShowNewMatch] = useState(false);
-  const [editingMatch, setEditingMatch] = useState(null);
-  const [quickTournament, setQuickTournament] = useState({
-    format: 'americano',
-    selectedPlayers: [],
-    guestPlayers: [],
-    location: ''
-  });
-  const [guestPlayerName, setGuestPlayerName] = useState('');
-  const [showNewPlayer, setShowNewPlayer] = useState(false);
-  const [editingPlayer, setEditingPlayer] = useState(null);
-  const [playerForm, setPlayerForm] = useState({ name: '', paypalLink: '', revolutLink: '', sortCode: '', accountNumber: '', email: '' });
-  const [showPointsModal, setShowPointsModal] = useState(false);
-  const [pendingTournament, setPendingTournament] = useState(null);
-  const [newMatch, setNewMatch] = useState({
-    date: new Date().toISOString().split('T')[0],
-    time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4, duration: '90'
-  });
-
-  const locs = [
-    'Tennis Centre - Wrexham',
-    'Padel Sheds - Chester', 
-    'Padel Point - Wrexham',
-    'Ace Padel Club - Lion Quays'
-  ];
-
-  useEffect(() => {
-    const unsubPlayers = db.collection('players').orderBy('name').onSnapshot(snapshot => {
-      const playerData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPlayers(playerData);
-      setLoading(false);
-    });
-
-    const unsubMatches = db.collection('matches').orderBy('date', 'desc').onSnapshot(snapshot => {
-      const matchData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMatches(matchData);
-    });
-
-    return () => {
-      unsubPlayers();
-      unsubMatches();
-    };
-  }, []);
-
-  useEffect(() => { lucide.createIcons(); });
-
-  const filteredMatches = isAdmin 
-    ? matches 
-    : matches.filter(m => 
-        // Show if user is in the match
-        (m.players && m.players.some(p => p.id === userPlayer?.id)) ||
-        // OR if it's an open registration match that's upcoming
-        (m.openRegistration && new Date(m.date + ' ' + (m.time || '00:00')) >= new Date())
-      );
-
-  const addPlayer = async () => {
-    if (playerForm.name.trim()) {
-      await db.collection('players').add({
-        name: playerForm.name.trim(),
-        paypalLink: playerForm.paypalLink.trim(),
-        revolutLink: playerForm.revolutLink.trim(),
-        sortCode: playerForm.sortCode.trim(),
-        accountNumber: playerForm.accountNumber.trim(),
-        email: playerForm.email.trim(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      setPlayerForm({ name: '', paypalLink: '', revolutLink: '', sortCode: '', accountNumber: '', email: '' });
-      setShowNewPlayer(false);
-    }
-  };
-
-  const updatePlayer = async () => {
-    if (editingPlayer && playerForm.name.trim()) {
-      await db.collection('players').doc(editingPlayer).update({
-        name: playerForm.name.trim(),
-        paypalLink: playerForm.paypalLink.trim(),
-        revolutLink: playerForm.revolutLink.trim(),
-        sortCode: playerForm.sortCode.trim(),
-        accountNumber: playerForm.accountNumber.trim(),
-        email: playerForm.email.trim()
-      });
-      setEditingPlayer(null);
-      setPlayerForm({ name: '', paypalLink: '', revolutLink: '', sortCode: '', accountNumber: '', email: '' });
-    }
-  };
-
-  const createMatch = async () => {
-    // For open registration matches
-    if (newMatch.openRegistration && newMatch.courtFee && newMatch.paymentOrganizer) {
-      const organizer = players.find(p => p.id === newMatch.paymentOrganizer);
-      
-      const matchData = {
-        ...newMatch,
-        courtFee: parseFloat(newMatch.courtFee),
-        players: [{
-          id: organizer.id,
-          name: organizer.name,
-          paid: true
-        }],
-        openRegistration: true,
-        maxPlayers: newMatch.maxPlayers,
-        costPerPlayer: 0, // Will be calculated when players join
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      
-      const docRef = await db.collection('matches').add(matchData);
-      
-      // Show shareable link
-      const shareUrl = `${window.location.origin}${window.location.pathname}?match=${docRef.id}`;
-      alert(`Match created! Share this link:\n${shareUrl}\n\nClick OK to copy to clipboard.`);
-      navigator.clipboard.writeText(shareUrl);
-      
-      setNewMatch({
-        date: new Date().toISOString().split('T')[0],
-        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4, duration: '90'
-      });
-      setShowNewMatch(false);
-      return;
-    }
-    
-    // For regular matches with selected players
-    if (newMatch.selectedPlayers.length >= 4 && newMatch.courtFee) {
-      const costPerPlayer = parseFloat(newMatch.courtFee) / newMatch.selectedPlayers.length;
-      
-      await db.collection('matches').add({
-        ...newMatch,
-        courtFee: parseFloat(newMatch.courtFee),
-        costPerPlayer: costPerPlayer,
-        players: newMatch.selectedPlayers.map(id => {
-          const player = players.find(p => p.id === id);
-          return { 
-            id, 
-            name: player.name, 
-            paid: id === newMatch.paymentOrganizer
-          };
-        }),
-        openRegistration: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      
-      setNewMatch({
-        date: new Date().toISOString().split('T')[0],
-        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4, duration: '90'
-      });
-      setShowNewMatch(false);
-    }
-  };
-
-  const editMatch = (match) => {
-    console.log('✏️ Edit match clicked:', match);
-    setEditingMatch(match.id);
-    setNewMatch({
-      date: match.date,
-      time: match.time || '',
-      courtFee: match.courtFee || '',
-      courts: match.courts || 1,
-      format: match.format,
-      location: match.location || '',
-      selectedPlayers: match.players ? match.players.map(p => p.id) : [],
-      paymentOrganizer: match.paymentOrganizer || null,
-      openRegistration: match.openRegistration || false,
-      maxPlayers: match.maxPlayers || 4,
-      duration: match.duration || '90'
-    });
-    setShowNewMatch(true);
-    console.log('✏️ Form opened for editing');
-  };
-
-  const updateMatch = async () => {
-    if (!editingMatch) return;
-
-    const match = matches.find(m => m.id === editingMatch);
-    
-    // For open registration matches
-    if (newMatch.openRegistration && newMatch.courtFee) {
-      const matchData = {
-        date: newMatch.date,
-        time: newMatch.time,
-        courtFee: parseFloat(newMatch.courtFee),
-        courts: newMatch.courts,
-        format: newMatch.format,
-        location: newMatch.location,
-        openRegistration: true,
-        maxPlayers: newMatch.maxPlayers,
-        // Recalculate cost per player if players already joined
-        costPerPlayer: match.players && match.players.length > 0 
-          ? parseFloat(newMatch.courtFee) / match.players.length 
-          : 0
-      };
-      
-      await db.collection('matches').doc(editingMatch).update(matchData);
-      
-      setNewMatch({
-        date: new Date().toISOString().split('T')[0],
-        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4, duration: '90'
-      });
-      setEditingMatch(null);
-      setShowNewMatch(false);
-      return;
-    }
-    
-    // For regular matches with selected players
-    if (newMatch.selectedPlayers.length >= 4 && newMatch.courtFee) {
-      const costPerPlayer = parseFloat(newMatch.courtFee) / newMatch.selectedPlayers.length;
-      
-      await db.collection('matches').doc(editingMatch).update({
-        date: newMatch.date,
-        time: newMatch.time,
-        courtFee: parseFloat(newMatch.courtFee),
-        costPerPlayer: costPerPlayer,
-        courts: newMatch.courts,
-        format: newMatch.format,
-        location: newMatch.location,
-        players: newMatch.selectedPlayers.map(id => {
-          const player = players.find(p => p.id === id);
-          const existingPlayer = match.players?.find(p => p.id === id);
-          return { 
-            id, 
-            name: player.name, 
-            paid: existingPlayer?.paid || id === newMatch.paymentOrganizer
-          };
-        }),
-        paymentOrganizer: newMatch.paymentOrganizer,
-        openRegistration: false
-      });
-      
-      setNewMatch({
-        date: new Date().toISOString().split('T')[0],
-        time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4, duration: '90'
-      });
-      setEditingMatch(null);
-      setShowNewMatch(false);
-    }
-  };
-
-  const cancelEdit = () => {
-    setEditingMatch(null);
-    setNewMatch({
-      date: new Date().toISOString().split('T')[0],
-      time: '', courtFee: '', courts: 1, format: 'open', location: '', selectedPlayers: [], paymentOrganizer: null, openRegistration: false, maxPlayers: 4, duration: '90'
-    });
-    setShowNewMatch(false);
-  };
-
-  const togglePayment = async (matchId, playerId) => {
-    if (!isAdmin && userPlayer?.id !== playerId) {
-      alert('You can only mark yourself as paid');
-      return;
-    }
-    
-    const match = matches.find(m => m.id === matchId);
-    const updatedPlayers = match.players.map(p => 
-      p.id === playerId ? { ...p, paid: !p.paid } : p
-    );
-    await db.collection('matches').doc(matchId).update({ players: updatedPlayers });
-  };
-
-  const createQuickTournament = async () => {
-    const totalPlayers = quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length;
-    
-    if (totalPlayers < 4) {
-      alert('Need at least 4 players for a tournament');
-      return;
-    }
-
-    // Create player objects for registered players
-    const registeredPlayers = quickTournament.selectedPlayers.map(id => {
-      const player = players.find(p => p.id === id);
-      return { id, name: player.name, paid: true };
-    });
-
-    // Create player objects for guest players (use temporary IDs)
-    const guestPlayerObjects = quickTournament.guestPlayers.map((name, idx) => ({
-      id: `guest_${Date.now()}_${idx}`,
-      name: name,
-      paid: true,
-      isGuest: true
-    }));
-
-    const allPlayers = [...registeredPlayers, ...guestPlayerObjects];
-
-    const tournamentData = {
-      date: new Date().toISOString().split('T')[0],
-      time: '23:59', // Set to end of day so it doesn't immediately become past
-      format: quickTournament.format,
-      location: quickTournament.location,
-      courts: 1,
-      courtFee: 0,
-      costPerPlayer: 0,
-      players: allPlayers,
-      openRegistration: false,
-      tournamentStarted: false,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    await db.collection('matches').add(tournamentData);
-    
-    // Reset form
-    setQuickTournament({
-      format: 'americano',
-      selectedPlayers: [],
-      guestPlayers: [],
-      location: ''
-    });
-    setGuestPlayerName('');
-    
-    alert('Tournament created! Go to Matches tab to start it.');
-  };
-
-  const joinMatch = async (matchId, playerId = null) => {
-    // If no playerId provided, use userPlayer (for regular users)
-    const playerToJoin = playerId || userPlayer?.id;
-    
-    if (!playerToJoin) {
-      alert('Please select a player to join as');
-      return;
-    }
-
-    const match = matches.find(m => m.id === matchId);
-    
-    if (match.players.length >= match.maxPlayers) {
-      alert('This match is full');
-      return;
-    }
-
-    if (match.players.some(p => p.id === playerToJoin)) {
-      alert('This player has already joined this match');
-      return;
-    }
-
-    const player = players.find(p => p.id === playerToJoin);
-    const updatedPlayers = [...match.players, { 
-      id: playerToJoin, 
-      name: player.name, 
-      paid: false 
-    }];
-
-    // Recalculate cost per player
-    const costPerPlayer = match.courtFee / updatedPlayers.length;
-
-    await db.collection('matches').doc(matchId).update({ 
-      players: updatedPlayers,
-      costPerPlayer: costPerPlayer
-    });
-  };
-
-  const leaveMatch = async (matchId, playerId = null) => {
-    const playerToRemove = playerId || userPlayer?.id;
-    
-    if (!playerToRemove) return;
-
-    const match = matches.find(m => m.id === matchId);
-    const updatedPlayers = match.players.filter(p => p.id !== playerToRemove);
-
-    // Recalculate cost per player
-    const costPerPlayer = updatedPlayers.length > 0 ? match.courtFee / updatedPlayers.length : 0;
-
-    await db.collection('matches').doc(matchId).update({ 
-      players: updatedPlayers,
-      costPerPlayer: costPerPlayer
-    });
-  };
-
-  const deleteMatch = async (matchId) => {
-    if (!isAdmin) {
-      alert('Only admins can delete matches');
-      return;
-    }
-    if (confirm('Are you sure you want to delete this match?')) {
-      await db.collection('matches').doc(matchId).delete();
-    }
-  };
-
-
-  const showTournamentPointsDialog = (match) => {
-    setPendingTournament(match);
-    setShowPointsModal(true);
-  };
-
-  const startTournamentWithPoints = async (targetPoints) => {
-    if (!pendingTournament) return;
-    
-    const match = pendingTournament;
-    const playerIds = match.players.map(p => p.id);
-    
-    let rounds;
-    if (match.format === 'americano') {
-      rounds = generateAmericanoPairings(playerIds, match.courts);
-    } else {
-      const firstRound = generateMexicanoRound(playerIds, match.courts, null);
-      rounds = [{ number: 1, matches: firstRound, completed: false }];
-    }
-
-    if (!rounds) {
-      alert('Invalid number of players. Need even number (minimum 4)');
-      return;
-    }
-
-    await db.collection('matches').doc(match.id).update({
-      tournamentStarted: true,
-      tournamentRounds: rounds,
-      tournamentPlayers: match.players.map(p => ({ ...p, points: 0, gamesWon: 0 })),
-      targetPoints: targetPoints,
-      currentRoundNumber: 1
-    });
-    
-    setShowPointsModal(false);
-    setPendingTournament(null);
-  };
-
-  const updateMatchScore = async (matchId, roundIdx, matchIdx, team, value) => {
-    const match = matches.find(m => m.id === matchId);
-    const newRounds = [...match.tournamentRounds];
-    newRounds[roundIdx].matches[matchIdx].score[team] = value;
-    
-    await db.collection('matches').doc(matchId).update({
-      tournamentRounds: newRounds
-    });
-  };
-
-  const completeRound = async (matchId, roundIdx) => {
-    const match = matches.find(m => m.id === matchId);
-    const newRounds = [...match.tournamentRounds];
-    
-    // Check all scores are filled
-    const allScored = newRounds[roundIdx].matches.every(m => m.score.team1 && m.score.team2);
-    if (!allScored) {
-      alert('Please enter all scores for this round');
-      return;
-    }
-
-    newRounds[roundIdx].completed = true;
-
-    // Calculate points
-    const playerPoints = {};
-    match.tournamentPlayers.forEach(p => {
-      playerPoints[p.id] = { points: 0, gamesWon: 0 };
-    });
-
-    newRounds.forEach(round => {
-      if (!round.completed && round.number !== roundIdx + 1) return;
-      
-      round.matches.forEach(m => {
-        const s1 = parseInt(m.score.team1) || 0;
-        const s2 = parseInt(m.score.team2) || 0;
-        
-        m.team1.forEach(pid => {
-          playerPoints[pid].points += s1;
-          if (s1 > s2) playerPoints[pid].gamesWon++;
-        });
-        
-        m.team2.forEach(pid => {
-          playerPoints[pid].points += s2;
-          if (s2 > s1) playerPoints[pid].gamesWon++;
-        });
-      });
-    });
-
-    const updatedPlayers = match.tournamentPlayers.map(p => ({
-      ...p,
-      points: playerPoints[p.id].points,
-      gamesWon: playerPoints[p.id].gamesWon
-    }));
-
-    const updateData = {
-      tournamentRounds: newRounds,
-      tournamentPlayers: updatedPlayers
-    };
-
-    // For Mexicano, generate next round
-    if (match.format === 'mexicano' && roundIdx + 1 < 10) {
-      const nextRound = generateMexicanoRound(
-        match.players.map(p => p.id),
-        match.courts,
-        updatedPlayers
-      );
-      
-      if (nextRound) {
-        newRounds.push({
-          number: roundIdx + 2,
-          matches: nextRound,
-          completed: false
-        });
-        updateData.tournamentRounds = newRounds;
-        updateData.currentRoundNumber = roundIdx + 2;
-      }
-    } else if (match.format === 'americano') {
-      updateData.currentRoundNumber = roundIdx + 2;
-    }
-
-    await db.collection('matches').doc(matchId).update(updateData);
-  };
-
-  const totalRev = matches.reduce((s, m) => s + (m.courtFee || 0), 0);
-  const totalCol = matches.reduce((s, m) => {
-    const paid = (m.players || []).filter(p => p.paid).length;
-    return s + ((m.courtFee || 0) / m.players.length) * paid;
-  }, 0);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-6xl">🎾</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      {showPointsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-xl font-bold mb-4">Select Points Per Match</h3>
-            <p className="text-gray-600 mb-6">How many points should each match be played to?</p>
-            
-            <div className="space-y-3">
-              <button 
-                onClick={() => startTournamentWithPoints(16)}
-                className="w-full py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-lg">
-                16 Points
-              </button>
-              
-              <button 
-                onClick={() => startTournamentWithPoints(32)}
-                className="w-full py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold text-lg">
-                32 Points
-              </button>
-
-              <button 
-                onClick={() => {
-                  setShowPointsModal(false);
-                  setPendingTournament(null);
-                }}
-                className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Padel Tracker</h1>
-            <p className="text-sm text-gray-600">
-              {isAdmin ? '👑 Admin' : `👤 ${userPlayer?.name}`}
-            </p>
-          </div>
-          <button onClick={onLogout} className="text-gray-600 hover:text-gray-900">
-            <Icon name="log-out" />
-          </button>
-        </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 py-4">
-        <div className="bg-white rounded-lg shadow-sm p-1 grid grid-cols-5 gap-1">
-          {['matches', 'tournament', 'stats', 'admin', 'players'].map(tab => (
-            <button key={tab} onClick={() => setView(tab)}
-              className={`py-2 px-2 rounded-md text-xs font-medium ${
-                view === tab ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-              }`}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 pb-24">
-        {view === 'matches' && (
-          <div className="space-y-4">
-            {filteredMatches.filter(m => new Date(m.date + ' ' + (m.time || '00:00')) >= new Date()).length === 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-                <div className="text-6xl mb-4">📅</div>
-                <p className="text-gray-600">{isAdmin ? 'No upcoming matches' : 'No upcoming matches for you'}</p>
-              </div>
-            )}
-
-            {filteredMatches
-              .filter(m => new Date(m.date + ' ' + (m.time || '00:00')) >= new Date())
-              .map(m => (
-                <MatchCard 
-                  key={m.id}
-                  match={m}
-                  players={players}
-                  isAdmin={isAdmin}
-                  userPlayer={userPlayer}
-                  onDelete={deleteMatch}
-                  onTogglePayment={togglePayment}
-                  onJoinMatch={joinMatch}
-                  onLeaveMatch={leaveMatch}
-                  onEditMatch={editMatch}
-                  onStartTournament={showTournamentPointsDialog}
-                  onUpdateScore={updateMatchScore}
-                  onCompleteRound={completeRound}
-                />
-              ))}
-
-            {isAdmin && (
-              <button onClick={() => setShowNewMatch(!showNewMatch)}
-                className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2">
-                <Icon name={showNewMatch ? "x" : "plus"} />
-                {showNewMatch ? 'Cancel' : 'New Match'}
-              </button>
-            )}
-
-            {isAdmin && showNewMatch && (
-              <NewMatchForm 
-                newMatch={newMatch}
-                setNewMatch={setNewMatch}
-                players={players}
-                locations={locs}
-                onCreate={editingMatch ? updateMatch : createMatch}
-                onCancel={editingMatch ? cancelEdit : null}
-                isEditing={!!editingMatch}
-              />
-            )}
-          </div>
-        )}
-
-        {view === 'tournament' && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold mb-4">🏆 Quick Tournament</h2>
-            <p className="text-sm text-gray-600 mb-6">
-              Create an instant Americano or Mexicano tournament - no scheduling needed!
-            </p>
-
-            <div className="space-y-4">
-              {/* Format Selection */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Tournament Format</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => setQuickTournament({ ...quickTournament, format: 'americano' })}
-                    className={`p-4 rounded-lg border-2 ${
-                      quickTournament.format === 'americano' 
-                        ? 'border-purple-500 bg-purple-50' 
-                        : 'border-gray-200'
-                    }`}>
-                    <div className="font-semibold text-purple-700">Americano</div>
-                    <div className="text-xs text-gray-600 mt-1">Round-robin pairs</div>
-                  </button>
-                  <button 
-                    onClick={() => setQuickTournament({ ...quickTournament, format: 'mexicano' })}
-                    className={`p-4 rounded-lg border-2 ${
-                      quickTournament.format === 'mexicano' 
-                        ? 'border-green-500 bg-green-50' 
-                        : 'border-gray-200'
-                    }`}>
-                    <div className="font-semibold text-green-700">Mexicano</div>
-                    <div className="text-xs text-gray-600 mt-1">Score-based pairing</div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Location (Optional)</label>
-                <select 
-                  value={quickTournament.location} 
-                  onChange={(e) => setQuickTournament({ ...quickTournament, location: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg">
-                  <option value="">Select location...</option>
-                  {locs.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                </select>
-              </div>
-
-              {/* Player Selection */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Select Players ({quickTournament.selectedPlayers.length} selected)
-                </label>
-                <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg">
-                  {players.map(p => (
-                    <button 
-                      key={p.id}
-                      onClick={() => {
-                        const selected = quickTournament.selectedPlayers.includes(p.id);
-                        setQuickTournament({
-                          ...quickTournament,
-                          selectedPlayers: selected 
-                            ? quickTournament.selectedPlayers.filter(id => id !== p.id)
-                            : [...quickTournament.selectedPlayers, p.id]
-                        });
-                      }}
-                      className={`p-3 text-sm rounded-lg border-2 ${
-                        quickTournament.selectedPlayers.includes(p.id) 
-                          ? 'border-indigo-500 bg-indigo-50 font-semibold' 
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}>
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-                {(quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length) > 0 && (quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length) < 4 && (
-                  <p className="text-xs text-orange-600 mt-2">
-                    ⚠️ Need at least 4 total players (currently {quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length})
-                  </p>
-                )}
-              </div>
-
-              {/* Guest Players */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Add Guest Players (Not Registered)
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    placeholder="Guest player name..."
-                    value={guestPlayerName}
-                    onChange={(e) => setGuestPlayerName(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && guestPlayerName.trim()) {
-                        setQuickTournament({
-                          ...quickTournament,
-                          guestPlayers: [...quickTournament.guestPlayers, guestPlayerName.trim()]
-                        });
-                        setGuestPlayerName('');
-                      }
-                    }}
-                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
-                  />
-                  <button
-                    onClick={() => {
-                      if (guestPlayerName.trim()) {
-                        setQuickTournament({
-                          ...quickTournament,
-                          guestPlayers: [...quickTournament.guestPlayers, guestPlayerName.trim()]
-                        });
-                        setGuestPlayerName('');
-                      }
-                    }}
-                    disabled={!guestPlayerName.trim()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm">
-                    Add
-                  </button>
-                </div>
-                
-                {quickTournament.guestPlayers.length > 0 && (
-                  <div className="space-y-2 p-2 bg-gray-50 border rounded-lg">
-                    {quickTournament.guestPlayers.map((name, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border">
-                        <span className="text-sm">
-                          <span className="text-gray-400 mr-2">👤</span>
-                          {name}
-                        </span>
-                        <button
-                          onClick={() => {
-                            setQuickTournament({
-                              ...quickTournament,
-                              guestPlayers: quickTournament.guestPlayers.filter((_, i) => i !== idx)
-                            });
-                          }}
-                          className="text-red-600 hover:text-red-800 text-xs">
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Total Players Summary */}
-              {(quickTournament.selectedPlayers.length > 0 || quickTournament.guestPlayers.length > 0) && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-sm font-semibold text-blue-900 mb-2">
-                    Total Players ({quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length}):
-                  </div>
-                  <div className="text-xs text-blue-700 space-y-1">
-                    {quickTournament.selectedPlayers.length > 0 && (
-                      <div>
-                        <span className="font-semibold">Registered:</span>{' '}
-                        {quickTournament.selectedPlayers.map(id => {
-                          const player = players.find(p => p.id === id);
-                          return player?.name;
-                        }).join(', ')}
-                      </div>
-                    )}
-                    {quickTournament.guestPlayers.length > 0 && (
-                      <div>
-                        <span className="font-semibold">Guests:</span>{' '}
-                        {quickTournament.guestPlayers.join(', ')}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Create Button */}
-              <button
-                onClick={createQuickTournament}
-                disabled={(quickTournament.selectedPlayers.length + quickTournament.guestPlayers.length) < 4}
-                className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
-                Create Tournament Now
-              </button>
-
-              <p className="text-xs text-gray-500 text-center">
-                💡 Tournament will appear in the Matches tab where you can start it
-              </p>
-            </div>
-          </div>
-        )}
-
-        {view === 'stats' && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold mb-4">Statistics</h2>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">£{totalRev.toFixed(2)}</div>
-                  <div className="text-sm text-gray-600">Total Revenue</div>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">£{totalCol.toFixed(2)}</div>
-                  <div className="text-sm text-gray-600">Collected</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Outstanding Payments */}
-            {(() => {
-              // Calculate who owes who
-              const debts = {};
-              
-              matches.forEach(match => {
-                if (!match.players || match.players.length === 0) return;
-                
-                const organizer = match.players.find(p => p.id === match.paymentOrganizer);
-                if (!organizer) return;
-                
-                match.players.forEach(player => {
-                  if (player.id !== match.paymentOrganizer && !player.paid) {
-                    const key = `${player.id}->${organizer.id}`;
-                    if (!debts[key]) {
-                      debts[key] = {
-                        debtor: player,
-                        creditor: organizer,
-                        amount: 0,
-                        matches: []
-                      };
+        const { useState, useEffect } = React;
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyABpBxHPcvTcMej6tgI8VRb0Cvb-liMqEU",
+            authDomain: "ace-padel-league.firebaseapp.com",
+            projectId: "ace-padel-league",
+            storageBucket: "ace-padel-league.firebasestorage.app",
+            messagingSenderId: "505879912474",
+            appId: "1:505879912474:web:3baa31c2897379f811f1a3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Auth Screen Component
+        function AuthScreen() {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isRegister, setIsRegister] = useState(false);
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+
+                try {
+                    if (isRegister) {
+                        await auth.createUserWithEmailAndPassword(email, password);
+                    } else {
+                        await auth.signInWithEmailAndPassword(email, password);
                     }
-                    debts[key].amount += match.costPerPlayer || 0;
-                    debts[key].matches.push({
-                      id: match.id,
-                      date: match.date,
-                      location: match.location,
-                      cost: match.costPerPlayer
-                    });
-                  }
-                });
-              });
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
 
-              const outstandingDebts = Object.values(debts);
+            const handleForgotPassword = async () => {
+                if (!email) {
+                    setError('Please enter your email address first');
+                    return;
+                }
 
-              return outstandingDebts.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <span className="text-red-600">💳</span> Outstanding Payments
-                  </h3>
-                  <div className="space-y-3">
-                    {outstandingDebts.map((debt, idx) => {
-                      const debtorPlayer = players.find(p => p.id === debt.debtor.id);
-                      const creditorPlayer = players.find(p => p.id === debt.creditor.id);
-                      
-                      return (
-                        <div key={idx} className="border-2 border-red-200 rounded-lg p-3 bg-red-50">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <div className="font-semibold text-red-900">
-                                {debt.debtor.name} owes {debt.creditor.name}
-                              </div>
-                              <div className="text-2xl font-bold text-red-600">
-                                £{debt.amount.toFixed(2)}
-                              </div>
-                            </div>
-                            {isAdmin && (
-                              <button
-                                onClick={async () => {
-                                  if (!confirm(`Mark all payments from ${debt.debtor.name} to ${debt.creditor.name} as paid?`)) return;
-                                  
-                                  // Mark all related matches as paid
-                                  for (const matchInfo of debt.matches) {
-                                    const match = matches.find(m => m.id === matchInfo.id);
-                                    const updatedPlayers = match.players.map(p => 
-                                      p.id === debt.debtor.id ? { ...p, paid: true } : p
-                                    );
-                                    await db.collection('matches').doc(matchInfo.id).update({ players: updatedPlayers });
-                                  }
-                                }}
-                                className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
-                                Mark Paid
-                              </button>
-                            )}
-                          </div>
-                          
-                          <div className="text-xs text-gray-600 mb-2">
-                            {debt.matches.length} match{debt.matches.length > 1 ? 'es' : ''}:
-                          </div>
-                          
-                          <div className="space-y-1 text-xs">
-                            {debt.matches.map((m, i) => (
-                              <div key={i} className="flex justify-between text-gray-700">
-                                <span>{new Date(m.date).toLocaleDateString('en-GB')} - {m.location}</span>
-                                <span className="font-semibold">£{m.cost.toFixed(2)}</span>
-                              </div>
-                            ))}
-                          </div>
+                try {
+                    await auth.sendPasswordResetEmail(email);
+                    alert('Password reset email sent! Check your inbox (and spam folder)');
+                } catch (err) {
+                    if (err.code === 'auth/user-not-found') {
+                        setError('No account found with this email address');
+                    } else {
+                        setError(err.message);
+                    }
+                }
+            };
 
-                          {creditorPlayer && (
-                            <div className="mt-3 pt-2 border-t border-red-300">
-                              <div className="text-xs text-gray-600 mb-1">Pay {debt.creditor.name}:</div>
-                              <div className="flex gap-2">
-                                {creditorPlayer.paypalLink && (
-                                  <a href={creditorPlayer.paypalLink} target="_blank" rel="noopener noreferrer"
-                                    className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
-                                    PayPal
-                                  </a>
-                                )}
-                                {creditorPlayer.revolutLink && (
-                                  <a href={creditorPlayer.revolutLink} target="_blank" rel="noopener noreferrer"
-                                    className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200">
-                                    Revolut
-                                  </a>
-                                )}
-                                {(creditorPlayer.sortCode || creditorPlayer.accountNumber) && (
-                                  <button 
-                                    onClick={() => { 
-                                      const bankDetails = `Sort Code: ${creditorPlayer.sortCode || 'N/A'}\nAccount: ${creditorPlayer.accountNumber || 'N/A'}`;
-                                      navigator.clipboard.writeText(bankDetails); 
-                                      alert('Bank details copied!\n' + bankDetails); 
-                                    }}
-                                    className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
-                                    Bank
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Historical Matches */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h3 className="font-semibold mb-3">Match History</h3>
-              <div className="space-y-3">
-                {filteredMatches
-                  .filter(m => new Date(m.date + ' ' + (m.time || '00:00')) < new Date())
-                  .map(m => {
-                    const isTournament = m.format === 'americano' || m.format === 'mexicano';
-                    const hasScores = m.matchScores && m.matchScores.some(s => s.team1 || s.team2);
-                    
-                    return (
-                      <div key={m.id} className="border rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-sm">{new Date(m.date).toLocaleDateString('en-GB')}</span>
-                              <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                m.format === 'open' ? 'bg-blue-100 text-blue-700' :
-                                m.format === 'americano' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
-                              }`}>{m.format === 'open' ? 'Open' : m.format === 'americano' ? 'Americano' : 'Mexicano'}</span>
-                            </div>
-                            {m.location && <p className="text-xs text-gray-500">📍 {m.location}</p>}
-                            {m.startTime && m.endTime && (
-                              <p className="text-xs text-gray-500">⏱️ {m.startTime} - {m.endTime}</p>
-                            )}
-                          </div>
-                          {isAdmin && (
-                            <button 
-                              onClick={async () => {
-                                if (confirm('Delete this match from history?')) {
-                                  await db.collection('matches').doc(m.id).delete();
-                                }
-                              }}
-                              className="text-gray-400 hover:text-red-500 p-1"
-                              title="Delete match">
-                              <Icon name="trash-2" />
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="text-xs text-gray-600 mb-2">
-                          {(m.players || []).map(p => p.name).join(', ')}
-                        </div>
-
-                        {/* Show Open match scores */}
-                        {!isTournament && hasScores && (
-                          <div className="mt-2 pt-2 border-t">
-                            <div className="flex gap-3 text-center">
-                              {m.matchScores.map((set, idx) => (
-                                <div key={idx}>
-                                  <div className="text-xs text-gray-500">Set {idx + 1}</div>
-                                  <div className="font-bold text-sm">{set.team1 || '-'} - {set.team2 || '-'}</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Show tournament winner */}
-                        {isTournament && m.tournamentPlayers && m.tournamentPlayers.length > 0 && (
-                          <div className="mt-2 pt-2 border-t">
-                            <div className="text-xs text-gray-600">
-                              Winner: <span className="font-semibold">{
-                                [...m.tournamentPlayers].sort((a, b) => {
-                                  if (b.points !== a.points) return b.points - a.points;
-                                  return b.gamesWon - a.gamesWon;
-                                })[0]?.name
-                              }</span> ({
-                                [...m.tournamentPlayers].sort((a, b) => {
-                                  if (b.points !== a.points) return b.points - a.points;
-                                  return b.gamesWon - a.gamesWon;
-                                })[0]?.points
-                              } pts)
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                
-                {filteredMatches.filter(m => new Date(m.date + ' ' + (m.time || '00:00')) < new Date()).length === 0 && (
-                  <p className="text-center text-gray-500 py-8">No completed matches yet</p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {view === 'players' && (
-          <PlayersView 
-            players={players}
-            isAdmin={isAdmin}
-            showNewPlayer={showNewPlayer}
-            setShowNewPlayer={setShowNewPlayer}
-            playerForm={playerForm}
-            setPlayerForm={setPlayerForm}
-            editingPlayer={editingPlayer}
-            setEditingPlayer={setEditingPlayer}
-            onAddPlayer={addPlayer}
-            onUpdatePlayer={updatePlayer}
-          />
-        )}
-
-        {view === 'admin' && isAdmin && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold mb-4">Admin Panel</h2>
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-semibold mb-2">Quick Stats</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>Total Players: <strong>{players ? players.length : 0}</strong></div>
-                    <div>Total Matches: <strong>{matches ? matches.length : 0}</strong></div>
-                    <div>Revenue: <strong>£{totalRev ? totalRev.toFixed(2) : '0.00'}</strong></div>
-                    <div>Collected: <strong>£{totalCol ? totalCol.toFixed(2) : '0.00'}</strong></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function MatchCard({ match, players, isAdmin, userPlayer, onDelete, onTogglePayment, onJoinMatch, onLeaveMatch, onEditMatch, onStartTournament, onUpdateScore, onCompleteRound }) {
-  const [showScoreInput, setShowScoreInput] = useState(false);
-  const [matchScores, setMatchScores] = useState(match.matchScores || [
-    { team1: '', team2: '' },
-    { team1: '', team2: '' },
-    { team1: '', team2: '' }
-  ]);
-  const [showTimeModal, setShowTimeModal] = useState(false);
-  const [startTime, setStartTime] = useState(match.startTime || '');
-  const [endTime, setEndTime] = useState(match.endTime || '');
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [showAdminJoinModal, setShowAdminJoinModal] = useState(false);
-  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
-
-  const mDate = new Date(match.date + ' ' + (match.time || '00:00'));
-  const isUp = mDate >= new Date();
-  const isTournament = match.format === 'americano' || match.format === 'mexicano';
-  const canEdit = isAdmin;
-  const isOpenRegistration = match.openRegistration;
-  const hasJoined = match.players?.some(p => p.id === userPlayer?.id);
-  const isFull = match.players?.length >= match.maxPlayers;
-
-  const shareMatch = () => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?match=${match.id}`;
-    navigator.clipboard.writeText(shareUrl);
-    setShowShareModal(true);
-    setTimeout(() => setShowShareModal(false), 3000);
-  };
-
-  const handleAdminJoin = () => {
-    if (isAdmin && !userPlayer) {
-      setShowAdminJoinModal(true);
-    } else {
-      onJoinMatch(match.id);
-    }
-  };
-
-  const confirmAdminJoin = () => {
-    if (selectedPlayerId) {
-      onJoinMatch(match.id, selectedPlayerId);
-      setShowAdminJoinModal(false);
-      setSelectedPlayerId(null);
-    }
-  };
-
-  const saveMatchScores = async () => {
-    await db.collection('matches').doc(match.id).update({
-      matchScores: matchScores
-    });
-    setShowScoreInput(false);
-  };
-
-  const saveMatchTime = async () => {
-    if (!startTime || !endTime) {
-      alert('Please enter both start and end times');
-      return;
-    }
-    await db.collection('matches').doc(match.id).update({
-      startTime: startTime,
-      endTime: endTime
-    });
-    setShowTimeModal(false);
-  };
-
-  if (isTournament && match.tournamentStarted) {
-    return <TournamentCard match={match} players={players} isAdmin={canEdit} onUpdateScore={onUpdateScore} onCompleteRound={onCompleteRound} onDelete={onDelete} />;
-  }
-
-  return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
-      {showShareModal && (
-        <div className="mb-3 p-2 bg-green-100 text-green-800 rounded text-sm text-center">
-          ✓ Link copied to clipboard!
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row justify-between gap-3 mb-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <h3 className="font-semibold text-base sm:text-lg">{match.courts} Court{match.courts > 1 ? 's' : ''}</h3>
-            <span className={`px-2 py-0.5 text-xs rounded-full whitespace-nowrap ${
-              match.format === 'open' ? 'bg-blue-100 text-blue-700' :
-              match.format === 'americano' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
-            }`}>{match.format === 'open' ? 'Open' : match.format === 'americano' ? 'Americano' : 'Mexicano'}</span>
-            {isOpenRegistration && (
-              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full whitespace-nowrap">
-                Open Sign-Up {match.players?.length || 0}/{match.maxPlayers}
-              </span>
-            )}
-            {isUp && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full whitespace-nowrap">Upcoming</span>}
-          </div>
-          <p className="text-sm text-gray-600">
-            {new Date(match.date).toLocaleDateString('en-GB')} 
-            {match.time && ` at ${match.time}`}
-            {match.duration && (
-              <span className="ml-2 text-xs text-gray-500">
-                ⏱️ {match.duration === '60' ? '1hr' : match.duration === '90' ? '1.5hrs' : match.duration === '120' ? '2hrs' : `${match.duration}mins`}
-              </span>
-            )}
-          </p>
-          {match.location && <p className="text-xs text-gray-500 truncate">📍 {match.location}</p>}
-          {match.startTime && match.endTime && (
-            <p className="text-xs text-gray-500">🕐 {match.startTime} - {match.endTime}</p>
-          )}
-          {!isOpenRegistration && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{(match.players || []).map(p => p.name).join(', ')}</p>}
-        </div>
-        <div className="flex sm:flex-col gap-2 justify-end">
-          {isOpenRegistration && canEdit && (
-            <button 
-              onClick={shareMatch}
-              className="text-gray-600 hover:text-blue-600 p-2"
-              title="Share match link">
-              <Icon name="share-2" />
-            </button>
-          )}
-          {canEdit && (
-            <button 
-              onClick={() => onEditMatch(match)}
-              className="text-gray-600 hover:text-indigo-600 p-2"
-              title="Edit match">
-              <Icon name="edit" />
-            </button>
-          )}
-          {!isUp && canEdit && !isTournament && (
-            <>
-              <button 
-                onClick={() => setShowTimeModal(true)}
-                className="text-gray-600 hover:text-indigo-600 p-2"
-                title="Set match time">
-                <Icon name="clock" />
-              </button>
-              <button 
-                onClick={() => setShowScoreInput(true)}
-                className="text-gray-600 hover:text-green-600 p-2"
-                title="Input scores">
-                <Icon name="clipboard" />
-              </button>
-            </>
-          )}
-          {canEdit && (
-            <button 
-              onClick={() => onDelete(match.id)} 
-              className="text-gray-400 hover:text-red-500 p-2"
-              title="Delete match">
-              <Icon name="trash-2" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Open Registration Section */}
-      {isOpenRegistration && (
-        <div className="space-y-3 mt-3 p-3 border-2 border-orange-300 rounded-lg bg-orange-50">
-          <div className="text-xs font-semibold text-orange-700 mb-2">OPEN REGISTRATION MODE</div>
-          
-          {/* Join/Leave buttons - only for upcoming matches */}
-          {isUp && !match.tournamentStarted && (
-            <div className="flex gap-2">
-              {!hasJoined ? (
-                <button
-                  onClick={handleAdminJoin}
-                  disabled={isFull}
-                  className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-lg">
-                  {isFull ? '❌ Match Full' : '✅ Join Match'}
-                </button>
-              ) : (
-                <button
-                  onClick={() => onLeaveMatch(match.id)}
-                  className="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold text-lg">
-                  ❌ Leave Match
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Show message if match is in the past */}
-          {!isUp && (
-            <div className="p-3 bg-gray-100 rounded text-center text-sm text-gray-600">
-              This match has already taken place
-            </div>
-          )}
-
-          {/* Players list */}
-          {match.costPerPlayer && match.players && match.players.length > 0 && (
-            <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-center">
-              <span className="text-sm font-semibold text-yellow-900">£{match.costPerPlayer.toFixed(2)} per player</span>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <h4 className="text-sm font-semibold">
-              Players ({match.players?.length || 0}/{match.maxPlayers})
-            </h4>
-            {match.players && match.players.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
-                {match.players.map(p => {
-                  const playerInfo = players.find(pl => pl.id === p.id);
-                  const canPay = isAdmin || userPlayer?.id === p.id;
-                  const isOrganizer = p.id === match.paymentOrganizer;
-                  
-                  return (
-                    <div key={p.id} className={`border-2 rounded-lg p-2 ${isOrganizer ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
-                      <div onClick={() => canPay && onTogglePayment(match.id, p.id)}
-                        className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
-                        <div>
-                          <span className="text-sm font-medium">{p.name}</span>
-                          {isOrganizer && <span className="ml-1 text-xs text-green-700">💰</span>}
-                        </div>
-                        {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-4">No players yet. Be the first to join!</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {!isUp && !isTournament && !isOpenRegistration && (
-        <div className="space-y-3">
-          {match.costPerPlayer && (
-            <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-center">
-              <span className="text-sm font-semibold text-yellow-900">£{match.costPerPlayer.toFixed(2)} per player</span>
-            </div>
-          )}
-          
-          <div className="grid grid-cols-2 gap-2">
-            {(match.players || []).map(p => {
-              const playerInfo = players.find(pl => pl.id === p.id);
-              const canPay = isAdmin || userPlayer?.id === p.id;
-              const isOrganizer = p.id === match.paymentOrganizer;
-              
-              return (
-                <div key={p.id} className={`border-2 rounded-lg p-2 ${isOrganizer ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
-                  <div onClick={() => canPay && onTogglePayment(match.id, p.id)}
-                    className={`flex items-center justify-between p-1 rounded ${canPay ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
-                    <div>
-                      <span className="text-sm font-medium">{p.name}</span>
-                      {isOrganizer && <span className="ml-1 text-xs text-green-700">💰 Paid court</span>}
-                    </div>
-                    {p.paid ? <Icon name="check-circle" /> : <Icon name="x-circle" />}
-                  </div>
-                  
-                  {!p.paid && !isOrganizer && playerInfo && (userPlayer?.id === p.id || isAdmin) && (
-                    <div className="mt-2 pt-2 border-t">
-                      {match.paymentOrganizer && (() => {
-                        const organizer = players.find(pl => pl.id === match.paymentOrganizer);
-                        return organizer ? (
-                          <div className="space-y-2">
-                            <div className="text-xs text-gray-600">
-                              Pay <strong>{organizer.name}</strong>:
-                            </div>
-                            <div className="flex gap-1 flex-wrap">
-                              {organizer.paypalLink && (
-                                <a href={organizer.paypalLink} target="_blank" rel="noopener noreferrer"
-                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
-                                  PayPal
-                                </a>
-                              )}
-                              {organizer.revolutLink && (
-                                <a href={organizer.revolutLink} target="_blank" rel="noopener noreferrer"
-                                  className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200">
-                                  Revolut
-                                </a>
-                              )}
-                              {(organizer.sortCode || organizer.accountNumber) && (
-                                <button 
-                                  onClick={() => { 
-                                    const bankDetails = `Sort Code: ${organizer.sortCode || 'N/A'}\nAccount: ${organizer.accountNumber || 'N/A'}`;
-                                    navigator.clipboard.writeText(bankDetails); 
-                                    alert('Bank details copied!\n' + bankDetails); 
-                                  }}
-                                  className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
-                                  Bank
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ) : null;
-                      })()}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {isTournament && !match.tournamentStarted && canEdit && (
-        <>
-          {/* Show player count for open registration tournaments */}
-          {isOpenRegistration && (
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-              <div className="text-sm text-blue-800">
-                <strong>{match.players?.length || 0}</strong> players registered
-              </div>
-              <div className="text-xs text-blue-600 mt-1">
-                Need at least 4 players to start tournament
-              </div>
-            </div>
-          )}
-          
-          {/* Start Tournament button - requires minimum 4 players */}
-          {(!isOpenRegistration || (match.players && match.players.length >= 4)) && (
-            <button onClick={() => onStartTournament(match)}
-              className="w-full mt-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center justify-center gap-2">
-              <Icon name="trophy" />
-              Start Tournament
-            </button>
-          )}
-          
-          {/* Show message if not enough players for open registration tournament */}
-          {isOpenRegistration && match.players && match.players.length < 4 && (
-            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-center text-sm text-amber-800">
-              ⚠️ Need at least 4 players to start tournament ({match.players.length}/4)
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Score Display for Open Matches */}
-      {!isTournament && match.matchScores && match.matchScores.some(s => s.team1 || s.team2) && (
-        <div className="mt-3 pt-3 border-t">
-          <h4 className="text-sm font-semibold mb-2">Match Result</h4>
-          <div className="flex gap-2 justify-center">
-            {match.matchScores.map((set, idx) => (
-              <div key={idx} className="text-center">
-                <div className="text-xs text-gray-500 mb-1">Set {idx + 1}</div>
-                <div className="font-bold">
-                  {set.team1 || '-'} - {set.team2 || '-'}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Score Input Modal */}
-      {showScoreInput && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Input Match Scores</h3>
-              <button onClick={() => setShowScoreInput(false)} className="text-gray-400 hover:text-gray-600">
-                <Icon name="x" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {matchScores.map((set, idx) => (
-                <div key={idx} className="border rounded-lg p-3">
-                  <div className="text-sm font-semibold mb-2">Set {idx + 1}</div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-600 mb-1">Team 1</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="7"
-                        value={set.team1}
-                        onChange={(e) => {
-                          const newScores = [...matchScores];
-                          newScores[idx].team1 = e.target.value;
-                          setMatchScores(newScores);
-                        }}
-                        className="w-full px-3 py-2 border rounded-lg text-center font-bold"
-                        placeholder="0"
-                      />
-                    </div>
-                    <span className="text-gray-400 mt-5">-</span>
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-600 mb-1">Team 2</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="7"
-                        value={set.team2}
-                        onChange={(e) => {
-                          const newScores = [...matchScores];
-                          newScores[idx].team2 = e.target.value;
-                          setMatchScores(newScores);
-                        }}
-                        className="w-full px-3 py-2 border rounded-lg text-center font-bold"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-2 mt-6">
-              <button 
-                onClick={saveMatchScores}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
-                Save Scores
-              </button>
-              <button 
-                onClick={() => setShowScoreInput(false)}
-                className="flex-1 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Time Input Modal */}
-      {showTimeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Set Match Time</h3>
-              <button onClick={() => setShowTimeModal(false)} className="text-gray-400 hover:text-gray-600">
-                <Icon name="x" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Start Time</label>
-                <input 
-                  type="time" 
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">End Time</label>
-                <input 
-                  type="time" 
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 mt-6">
-              <button 
-                onClick={saveMatchTime}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
-                Save Time
-              </button>
-              <button 
-                onClick={() => setShowTimeModal(false)}
-                className="flex-1 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Admin Player Selection Modal */}
-      {showAdminJoinModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Join as Which Player?</h3>
-              <button onClick={() => setShowAdminJoinModal(false)} className="text-gray-400 hover:text-gray-600">
-                <Icon name="x" />
-              </button>
-            </div>
-
-            <p className="text-sm text-gray-600 mb-4">
-              Select which player profile you want to join this match as:
-            </p>
-
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {players
-                .filter(p => !match.players?.some(mp => mp.id === p.id))
-                .map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedPlayerId(p.id)}
-                    className={`w-full p-3 text-left border-2 rounded-lg transition ${
-                      selectedPlayerId === p.id
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}>
-                    <div className="font-medium">{p.name}</div>
-                    {p.email && <div className="text-xs text-gray-500">{p.email}</div>}
-                  </button>
-                ))}
-            </div>
-
-            <div className="flex gap-2 mt-6">
-              <button 
-                onClick={confirmAdminJoin}
-                disabled={!selectedPlayerId}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
-                Join Match
-              </button>
-              <button 
-                onClick={() => {
-                  setShowAdminJoinModal(false);
-                  setSelectedPlayerId(null);
-                }}
-                className="flex-1 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TournamentCard({ match, players, isAdmin, onUpdateScore, onCompleteRound, onDelete }) {
-  const [selectedMatch, setSelectedMatch] = useState(null);
-  const [showTimeModal, setShowTimeModal] = useState(false);
-  const [timeModalMatch, setTimeModalMatch] = useState(null);
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  
-  const currentRound = match.tournamentRounds?.find(r => !r.completed);
-  const currentRoundNumber = match.currentRoundNumber || 1;
-  const totalRounds = match.format === 'americano' ? match.tournamentRounds?.length : '?';
-  
-  const sortedPlayers = [...(match.tournamentPlayers || [])].sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    return b.gamesWon - a.gamesWon;
-  });
-
-  const allRoundsComplete = match.tournamentRounds?.every(r => r.completed);
-
-  const setQuickScore = (roundIdx, matchIdx, score1) => {
-    const score2 = match.targetPoints - score1;
-    onUpdateScore(match.id, roundIdx, matchIdx, 'team1', score1.toString());
-    onUpdateScore(match.id, roundIdx, matchIdx, 'team2', score2.toString());
-    setSelectedMatch(null);
-  };
-
-  const openTimeModal = (matchIdx) => {
-    const m = currentRound.matches[matchIdx];
-    setTimeModalMatch(matchIdx);
-    setStartTime(m.startTime || '');
-    setEndTime(m.endTime || '');
-    setShowTimeModal(true);
-  };
-
-  const saveMatchTime = async () => {
-    if (!startTime || !endTime) {
-      alert('Please enter both start and end times');
-      return;
-    }
-    
-    const newRounds = [...match.tournamentRounds];
-    const roundIdx = currentRound.number - 1;
-    newRounds[roundIdx].matches[timeModalMatch].startTime = startTime;
-    newRounds[roundIdx].matches[timeModalMatch].endTime = endTime;
-    
-    await db.collection('matches').doc(match.id).update({
-      tournamentRounds: newRounds
-    });
-    
-    setShowTimeModal(false);
-    setStartTime('');
-    setEndTime('');
-    setTimeModalMatch(null);
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="bg-indigo-600 text-white p-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-bold">{match.format === 'americano' ? 'Americano' : 'Mexicano'}</h3>
-              {match.targetPoints && (
-                <span className="px-2 py-1 bg-white bg-opacity-20 rounded text-sm">{match.targetPoints}pts</span>
-              )}
-            </div>
-            <p className="text-sm opacity-90">{new Date(match.date).toLocaleDateString('en-GB')}</p>
-            {match.location && <p className="text-xs opacity-75">📍 {match.location}</p>}
-          </div>
-          {isAdmin && (
-            <button onClick={() => onDelete(match.id)} className="text-white opacity-75 hover:opacity-100">
-              <Icon name="trash-2" />
-            </button>
-          )}
-        </div>
-        
-        {!allRoundsComplete && (
-          <div className="mt-3 bg-white bg-opacity-20 rounded p-2 text-sm">
-            <div className="flex justify-between items-center">
-              <span>Round {currentRoundNumber} of {totalRounds}</span>
-              <span>{match.courts} Court{match.courts > 1 ? 's' : ''}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Leaderboard */}
-      <div className="p-4 border-b">
-        <h4 className="font-semibold mb-3">Leaderboard</h4>
-        <div className="space-y-2">
-          {sortedPlayers.map((p, idx) => {
-            const isWinner = match.targetPoints && p.points >= match.targetPoints;
             return (
-              <div key={p.id} className={`flex items-center justify-between p-2 rounded ${
-                isWinner ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50'
-              }`}>
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-gray-400 w-6">#{idx + 1}</span>
-                  <span className="font-medium">{p.name}</span>
-                  {isWinner && <span>👑</span>}
+                <div className="container">
+                    <header>
+                        <h1>Ace Padel Club</h1>
+                        <p className="subtitle">League Manager</p>
+                        <p className="location">Oswestry, Shropshire</p>
+                    </header>
+
+                    <div className="card" style={{ maxWidth: '500px', margin: '0 auto' }}>
+                        <h2>{isRegister ? 'Create Account' : 'Login'}</h2>
+                        {error && (
+                            <div style={{ 
+                                background: '#ff4444', 
+                                padding: '15px', 
+                                borderRadius: '8px', 
+                                marginBottom: '20px',
+                                color: 'white'
+                            }}>
+                                {error}
+                            </div>
+                        )}
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label>Email</label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    placeholder="your.email@example.com"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Password</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    placeholder="••••••••"
+                                    minLength="6"
+                                />
+                            </div>
+                            <button 
+                                type="submit" 
+                                className="btn btn-primary" 
+                                style={{ width: '100%', marginBottom: '15px' }}
+                                disabled={loading}
+                            >
+                                {loading ? 'Please wait...' : (isRegister ? 'Create Account' : 'Login')}
+                            </button>
+                        </form>
+
+                        {!isRegister && (
+                            <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+                                <button
+                                    onClick={handleForgotPassword}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'var(--ace-gold)',
+                                        cursor: 'pointer',
+                                        textDecoration: 'underline',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    Forgot password?
+                                </button>
+                            </div>
+                        )}
+
+                        <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                            {isRegister ? 'Already have an account?' : "Don't have an account?"}
+                            {' '}
+                            <button
+                                onClick={() => {
+                                    setIsRegister(!isRegister);
+                                    setError('');
+                                }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--ace-gold)',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    fontSize: '1rem'
+                                }}
+                            >
+                                {isRegister ? 'Login' : 'Register'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold text-indigo-600">{p.points}</div>
-                  <div className="text-xs text-gray-500">{p.gamesWon}W</div>
-                </div>
-              </div>
             );
-          })}
-        </div>
-      </div>
+        }
 
-      {/* Current Round */}
-      {currentRound && !allRoundsComplete && (
-        <div className="p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h4 className="font-semibold">Round {currentRound.number}</h4>
-          </div>
-          
-          <div className="space-y-3">
-            {currentRound.matches.map((m, idx) => {
-              // Look up names from match.players (includes guests) OR registered players
-              const allMatchPlayers = [...(match.players || []), ...players];
-              const team1Names = m.team1.map(id => {
-                const player = allMatchPlayers.find(p => p.id === id);
-                return player?.name || '?';
-              });
-              const team2Names = m.team2.map(id => {
-                const player = allMatchPlayers.find(p => p.id === id);
-                return player?.name || '?';
-              });
-              const hasScores = m.score.team1 && m.score.team2;
-              const showQuickPicker = isAdmin && selectedMatch === idx;
-              
-              return (
-                <div key={idx} className="border-2 border-gray-200 rounded-lg p-3">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="text-xs text-gray-500 font-semibold">Court {m.court}</div>
-                    {m.startTime && m.endTime && (
-                      <div className="text-xs text-gray-500">
-                        {m.startTime} - {m.endTime}
-                      </div>
-                    )}
-                    {isAdmin && !hasScores && (
-                      <button 
-                        onClick={() => openTimeModal(idx)}
-                        className="text-xs text-indigo-600 hover:text-indigo-800">
-                        ⏱️ Set Time
-                      </button>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-center mb-3">
-                    <div className="text-right">
-                      <div className="font-medium text-sm">{team1Names[0]}</div>
-                      <div className="text-xs text-gray-600">{team1Names[1]}</div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      {hasScores ? (
-                        <>
-                          <div className="w-12 text-center border-2 border-gray-300 rounded font-bold text-lg p-1 bg-gray-50">
-                            {m.score.team1}
-                          </div>
-                          <span className="text-gray-400">-</span>
-                          <div className="w-12 text-center border-2 border-gray-300 rounded font-bold text-lg p-1 bg-gray-50">
-                            {m.score.team2}
-                          </div>
-                        </>
-                      ) : isAdmin ? (
-                        <>
-                          <button
-                            onClick={() => setSelectedMatch(showQuickPicker ? null : idx)}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-semibold">
-                            Input Score
-                          </button>
-                        </>
-                      ) : (
-                        <div className="text-gray-400 text-sm">Awaiting score</div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <div className="font-medium text-sm">{team2Names[0]}</div>
-                      <div className="text-xs text-gray-600">{team2Names[1]}</div>
-                    </div>
-                  </div>
+        // Team Selection Screen
+        function TeamSelectionScreen({ user, onTeamSelected }) {
+            const [teams, setTeams] = useState([]);
+            const [selectedTeam, setSelectedTeam] = useState('');
+            const [playerName, setPlayerName] = useState('');
+            const [loading, setLoading] = useState(false);
 
-                  {showQuickPicker && (
-                    <div className="mt-3 pt-3 border-t">
-                      <div className="text-xs text-gray-600 mb-2 text-center">
-                        Select {team1Names[0]} & {team1Names[1]}'s score:
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {Array.from({ length: match.targetPoints + 1 }, (_, i) => i).map(score => (
-                          <button
-                            key={score}
-                            onClick={() => setQuickScore(currentRound.number - 1, idx, score)}
-                            className={`w-12 h-12 rounded-lg font-bold text-sm ${
-                              score > match.targetPoints / 2 
-                                ? 'bg-green-600 text-white hover:bg-green-700' 
-                                : 'bg-gray-600 text-white hover:bg-gray-700'
-                            }`}>
-                            {score}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => setSelectedMatch(null)}
-                          className="w-12 h-12 rounded-lg font-bold text-sm bg-red-600 text-white hover:bg-red-700">
-                          ✕
+            useEffect(() => {
+                loadTeams();
+            }, []);
+
+            const loadTeams = async () => {
+                try {
+                    console.log('Loading teams...');
+                    const snapshot = await db.collection('teams').get();
+                    console.log('Teams snapshot received:', snapshot.size, 'documents');
+                    
+                    const teamsData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    console.log('Teams loaded:', teamsData.length);
+                    console.log('First team:', teamsData[0]);
+                    
+                    // Sort in JavaScript instead of Firestore query
+                    teamsData.sort((a, b) => {
+                        if (a.league !== b.league) {
+                            return a.league.localeCompare(b.league);
+                        }
+                        return a.name.localeCompare(b.name);
+                    });
+                    
+                    setTeams(teamsData);
+                } catch (error) {
+                    console.error('Error loading teams:', error);
+                    alert('Error loading teams: ' + error.message);
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+
+                try {
+                    await db.collection('players').doc(user.uid).set({
+                        email: user.email,
+                        teamId: selectedTeam,
+                        playerName: playerName,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    onTeamSelected();
+                } catch (error) {
+                    console.error('Error linking team:', error);
+                    alert('Error linking team: ' + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const teamsByLeague = teams.reduce((acc, team) => {
+                if (!acc[team.league]) acc[team.league] = [];
+                acc[team.league].push(team);
+                return acc;
+            }, {});
+
+            return (
+                <div className="container">
+                    <header>
+                        <h1>Welcome to Ace Padel!</h1>
+                        <p className="subtitle">Link Your Team</p>
+                    </header>
+
+                    <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+                        <h2>Select Your Team</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '30px' }}>
+                            Choose your team to view fixtures and submit match scores
+                        </p>
+                        
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label>Your Name</label>
+                                <input
+                                    type="text"
+                                    value={playerName}
+                                    onChange={(e) => setPlayerName(e.target.value)}
+                                    required
+                                    placeholder="Enter your name"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Your Team</label>
+                                <select
+                                    value={selectedTeam}
+                                    onChange={(e) => setSelectedTeam(e.target.value)}
+                                    required
+                                >
+                                    <option value="">-- Select Your Team --</option>
+                                    {Object.entries(teamsByLeague).map(([league, leagueTeams]) => (
+                                        <optgroup key={league} label={getDisplayName(league)}>
+                                            {leagueTeams.map(team => (
+                                                <option key={team.id} value={team.id}>
+                                                    {team.name}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                style={{ width: '100%' }}
+                                disabled={loading}
+                            >
+                                {loading ? 'Saving...' : 'Continue'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // Main App Component
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [playerData, setPlayerData] = useState(null);
+            const [activeTab, setActiveTab] = useState('fixtures');
+            const [teams, setTeams] = useState([]);
+            const [fixtures, setFixtures] = useState([]);
+            const [selectedLeague, setSelectedLeague] = useState('');
+
+            useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged(async (user) => {
+                    setUser(user);
+                    if (user) {
+                        await loadPlayerData(user.uid);
+                        await loadTeams();
+                        await loadFixtures();
+                    }
+                    setLoading(false);
+                });
+
+                return () => unsubscribe();
+            }, []);
+
+            const loadPlayerData = async (userId) => {
+                try {
+                    const doc = await db.collection('players').doc(userId).get();
+                    if (doc.exists) {
+                        setPlayerData(doc.data());
+                        // Set league filter based on player's team
+                        const teamDoc = await db.collection('teams').doc(doc.data().teamId).get();
+                        if (teamDoc.exists) {
+                            setSelectedLeague(teamDoc.data().league);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading player data:', error);
+                }
+            };
+
+            const loadTeams = async () => {
+                try {
+                    console.log('Loading teams in main app...');
+                    const snapshot = await db.collection('teams').get();
+                    console.log('Teams loaded:', snapshot.size);
+                    
+                    const teamsData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    // Sort in JavaScript
+                    teamsData.sort((a, b) => {
+                        if (a.league !== b.league) {
+                            return a.league.localeCompare(b.league);
+                        }
+                        return a.name.localeCompare(b.name);
+                    });
+                    
+                    setTeams(teamsData);
+                } catch (error) {
+                    console.error('Error loading teams:', error);
+                }
+            };
+
+            const loadFixtures = async () => {
+                try {
+                    const snapshot = await db.collection('fixtures').where('completed', '==', false).get();
+                    const fixturesData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    setFixtures(fixturesData);
+                } catch (error) {
+                    console.error('Error loading fixtures:', error);
+                }
+            };
+
+            const handleLogout = async () => {
+                await auth.signOut();
+            };
+
+            if (loading) {
+                return (
+                    <div className="container">
+                        <div className="empty-state">
+                            <p>Loading...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!user) {
+                return <AuthScreen />;
+            }
+
+            if (!playerData) {
+                return <TeamSelectionScreen user={user} onTeamSelected={() => loadPlayerData(user.uid)} />;
+            }
+
+            const playerTeam = teams.find(t => t.id === playerData.teamId);
+
+            return (
+                <div className="container">
+                    <header>
+                        <h1>Ace Padel Club</h1>
+                        <p className="subtitle">League Manager</p>
+                        <p className="location">Oswestry, Shropshire</p>
+                        <div className="user-info">
+                            <div>
+                                <div className="user-email">{user.email}</div>
+                                {playerTeam && (
+                                    <span className="team-badge">{playerTeam.name}</span>
+                                )}
+                            </div>
+                            <button onClick={handleLogout} className="btn-logout">Logout</button>
+                        </div>
+                    </header>
+
+                    <div className="tabs">
+                        <button 
+                            className={`tab ${activeTab === 'fixtures' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('fixtures')}
+                        >
+                            My Fixtures
                         </button>
-                      </div>
-                      <div className="text-xs text-center mt-2 text-gray-500">
-                        Opponent will get {match.targetPoints} - [your score]
-                      </div>
+                        <button 
+                            className={`tab ${activeTab === 'tables' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('tables')}
+                        >
+                            All League Tables
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'results' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('results')}
+                        >
+                            Results
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'profile' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('profile')}
+                        >
+                            My Profile
+                        </button>
                     </div>
-                  )}
+
+                    {activeTab === 'fixtures' && (
+                        <FixturesView 
+                            fixtures={fixtures} 
+                            teams={teams} 
+                            playerData={playerData}
+                            selectedLeague={selectedLeague}
+                            onUpdate={loadFixtures}
+                            loadTeams={loadTeams}
+                        />
+                    )}
+                    {activeTab === 'tables' && (
+                        <AllLeagueTables teams={teams} playerLeague={selectedLeague} />
+                    )}
+                    {activeTab === 'results' && (
+                        <ResultsView 
+                            teams={teams}
+                            selectedLeague={selectedLeague}
+                            activeTab={activeTab}
+                        />
+                    )}
+                    {activeTab === 'profile' && (
+                        <ProfileEditor 
+                            user={user}
+                            playerData={playerData}
+                            teams={teams}
+                            onUpdate={() => loadPlayerData(user.uid)}
+                        />
+                    )}
                 </div>
-              );
-            })}
-          </div>
+            );
+        }
 
-          {showTimeModal && timeModalMatch !== null && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-                <h3 className="font-bold mb-4">Set Match Time</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Start Time</label>
-                    <input 
-                      type="time" 
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">End Time</label>
-                    <input 
-                      type="time" 
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={saveMatchTime}
-                      className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                      Save
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setShowTimeModal(false);
-                        setStartTime('');
-                        setEndTime('');
-                        setTimeModalMatch(null);
-                      }}
-                      className="flex-1 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
-                      Cancel
-                    </button>
-                  </div>
+        // Fixtures View Component
+        function FixturesView({ fixtures, teams, playerData, selectedLeague, onUpdate, loadTeams }) {
+            const [submittingScore, setSubmittingScore] = useState(null);
+
+            const getTeamName = (teamId) => {
+                const team = teams.find(t => t.id === teamId);
+                return team ? team.name : 'Unknown Team';
+            };
+
+            const getTeamLeague = (teamId) => {
+                const team = teams.find(t => t.id === teamId);
+                return team ? team.league : null;
+            };
+
+            const isMyFixture = (fixture) => {
+                return fixture.team1 === playerData.teamId || fixture.team2 === playerData.teamId;
+            };
+
+            // Filter fixtures: only show current week's fixtures (week-by-week release)
+            const now = new Date();
+            const nextSunday = new Date(now);
+            nextSunday.setDate(now.getDate() + (7 - now.getDay())); // Next Sunday
+            nextSunday.setHours(23, 59, 59, 999);
+
+            const filteredFixtures = fixtures.filter(fixture => {
+                // Filter by league
+                const team1League = getTeamLeague(fixture.team1);
+                if (team1League !== selectedLeague) return false;
+
+                // Only show fixtures for this week
+                if (!fixture.date) return false;
+                const fixtureDate = new Date(fixture.date.seconds * 1000);
+                return fixtureDate <= nextSunday;
+            });
+
+            const handleSubmitScore = async (fixtureId, scores) => {
+                try {
+                    console.log('Submitting score for fixture:', fixtureId);
+                    console.log('Scores:', scores);
+                    
+                    const fixture = fixtures.find(f => f.id === fixtureId);
+                    if (!fixture) {
+                        throw new Error('Fixture not found');
+                    }
+                    
+                    // Calculate which team won each set (simpler logic)
+                    const team1SetsWon = [
+                        scores.set1Team1 > scores.set1Team2 ? 1 : 0,
+                        scores.set2Team1 > scores.set2Team2 ? 1 : 0,
+                        scores.set3Team1 > scores.set3Team2 ? 1 : 0
+                    ].reduce((a, b) => a + b, 0);
+                    
+                    const team1SetsTied = [
+                        scores.set1Team1 === scores.set1Team2 ? 1 : 0,
+                        scores.set2Team1 === scores.set2Team2 ? 1 : 0,
+                        scores.set3Team1 === scores.set3Team2 ? 1 : 0
+                    ].reduce((a, b) => a + b, 0);
+                    
+                    const team1SetsLost = 3 - team1SetsWon - team1SetsTied;
+                    
+                    const team2SetsWon = team1SetsLost;
+                    const team2SetsTied = team1SetsTied;
+                    const team2SetsLost = team1SetsWon;
+                    
+                    // Calculate points (3 per set won, 1 per set tied)
+                    const team1Points = (team1SetsWon * 3) + (team1SetsTied * 1);
+                    const team2Points = (team2SetsWon * 3) + (team2SetsTied * 1);
+                    
+                    // Determine match winner (who won more sets)
+                    const winner = team1SetsWon > team2SetsWon ? fixture.team1 : 
+                                   team2SetsWon > team1SetsWon ? fixture.team2 : null;
+                    
+                    console.log('Team 1 stats:', { setsWon: team1SetsWon, setsTied: team1SetsTied, setsLost: team1SetsLost, points: team1Points });
+                    console.log('Team 2 stats:', { setsWon: team2SetsWon, setsTied: team2SetsTied, setsLost: team2SetsLost, points: team2Points });
+                    console.log('Winner:', winner);
+
+                    // Update fixture in Firestore
+                    await db.collection('fixtures').doc(fixtureId).update({
+                        set1Team1: scores.set1Team1,
+                        set1Team2: scores.set1Team2,
+                        set2Team1: scores.set2Team1,
+                        set2Team2: scores.set2Team2,
+                        set3Team1: scores.set3Team1,
+                        set3Team2: scores.set3Team2,
+                        completed: true,
+                        completedBy: playerData.playerName,
+                        completedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('✅ Fixture updated in Firestore');
+
+                    // Update Team 1 stats
+                    const team1Ref = db.collection('teams').doc(fixture.team1);
+                    const team1Doc = await team1Ref.get();
+                    const team1Data = team1Doc.data();
+                    
+                    await team1Ref.update({
+                        played: (team1Data.played || 0) + 1,
+                        won: winner === fixture.team1 ? (team1Data.won || 0) + 1 : (team1Data.won || 0),
+                        lost: winner === fixture.team2 ? (team1Data.lost || 0) + 1 : (team1Data.lost || 0),
+                        setsWon: (team1Data.setsWon || 0) + team1SetsWon,
+                        setsTied: (team1Data.setsTied || 0) + team1SetsTied,
+                        setsLost: (team1Data.setsLost || 0) + team1SetsLost,
+                        points: (team1Data.points || 0) + team1Points
+                    });
+                    console.log('✅ Team 1 stats updated');
+
+                    // Update Team 2 stats
+                    const team2Ref = db.collection('teams').doc(fixture.team2);
+                    const team2Doc = await team2Ref.get();
+                    const team2Data = team2Doc.data();
+                    
+                    await team2Ref.update({
+                        played: (team2Data.played || 0) + 1,
+                        won: winner === fixture.team2 ? (team2Data.won || 0) + 1 : (team2Data.won || 0),
+                        lost: winner === fixture.team1 ? (team2Data.lost || 0) + 1 : (team2Data.lost || 0),
+                        setsWon: (team2Data.setsWon || 0) + team2SetsWon,
+                        setsTied: (team2Data.setsTied || 0) + team2SetsTied,
+                        setsLost: (team2Data.setsLost || 0) + team2SetsLost,
+                        points: (team2Data.points || 0) + team2Points
+                    });
+                    console.log('✅ Team 2 stats updated');
+
+                    alert('Score submitted successfully!');
+                    setSubmittingScore(null);
+                    
+                    // Reload both fixtures AND teams to update league table
+                    await onUpdate();
+                    await loadTeams();
+                    console.log('✅ Data reloaded');
+                    
+                } catch (error) {
+                    console.error('❌ Error submitting score:', error);
+                    alert('Error submitting score: ' + error.message);
+                }
+            };
+
+            if (filteredFixtures.length === 0) {
+                return (
+                    <div className="card">
+                        <h2>{getDisplayName(selectedLeague)} - This Week's Fixtures</h2>
+                        <div className="empty-state">
+                            <p>No fixtures this week for your league</p>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '10px' }}>
+                                New fixtures are released every Sunday at midnight
+                            </p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="card">
+                    <h2>{getDisplayName(selectedLeague)} - This Week's Fixtures</h2>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                        Showing only your league's fixtures • New round released every Sunday • Matches must be played by the following Saturday
+                    </p>
+
+                    {filteredFixtures.map((fixture) => (
+                        <div key={fixture.id} className="fixture">
+                            <div className="fixture-teams">
+                                <div className="fixture-team" style={{ 
+                                    color: fixture.team1 === playerData.teamId ? 'var(--ace-gold)' : 'inherit',
+                                    fontWeight: fixture.team1 === playerData.teamId ? '700' : '600'
+                                }}>
+                                    {getTeamName(fixture.team1)}
+                                </div>
+                                <div className="vs">vs</div>
+                                <div className="fixture-team" style={{ 
+                                    color: fixture.team2 === playerData.teamId ? 'var(--ace-gold)' : 'inherit',
+                                    fontWeight: fixture.team2 === playerData.teamId ? '700' : '600',
+                                    textAlign: 'right'
+                                }}>
+                                    {getTeamName(fixture.team2)}
+                                </div>
+                            </div>
+                            <div className="fixture-date">
+                                Play by: {fixture.date ? new Date(fixture.date.seconds * 1000).toLocaleDateString('en-GB', { 
+                                    weekday: 'long',
+                                    day: 'numeric',
+                                    month: 'long'
+                                }) : 'TBD'}
+                            </div>
+
+                            {isMyFixture(fixture) && (
+                                <>
+                                    {submittingScore === fixture.id ? (
+                                        <ScoreSubmission
+                                            fixture={fixture}
+                                            teams={teams}
+                                            onSubmit={(scores) => handleSubmitScore(fixture.id, scores)}
+                                            onCancel={() => setSubmittingScore(null)}
+                                        />
+                                    ) : (
+                                        <button
+                                            className="btn btn-primary"
+                                            style={{ marginTop: '15px', width: '100%' }}
+                                            onClick={() => setSubmittingScore(fixture.id)}
+                                        >
+                                            Submit Match Score
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    ))}
                 </div>
-              </div>
-            </div>
-          )}
+            );
+        }
 
-          {isAdmin && (
-            <button 
-              onClick={() => onCompleteRound(match.id, currentRound.number - 1)}
-              className="w-full mt-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
-              Complete Round {currentRound.number}
-            </button>
-          )}
-        </div>
-      )}
+        // Score Submission Component
+        function ScoreSubmission({ fixture, teams, onSubmit, onCancel }) {
+            const [scores, setScores] = useState({
+                set1Team1: '',
+                set1Team2: '',
+                set2Team1: '',
+                set2Team2: '',
+                set3Team1: '',
+                set3Team2: ''
+            });
 
-      {allRoundsComplete && (
-        <div className="p-4 bg-green-50 border-t-4 border-green-400 text-center">
-          <div className="text-4xl mb-2">🏆</div>
-          <div className="font-bold text-green-800 text-lg">Tournament Complete!</div>
-          <div className="text-green-600">Winner: {sortedPlayers[0]?.name} ({sortedPlayers[0]?.points} pts)</div>
-        </div>
-      )}
-    </div>
-  );
-}
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                // Convert empty strings to 0 before submitting
+                const finalScores = {
+                    set1Team1: parseInt(scores.set1Team1) || 0,
+                    set1Team2: parseInt(scores.set1Team2) || 0,
+                    set2Team1: parseInt(scores.set2Team1) || 0,
+                    set2Team2: parseInt(scores.set2Team2) || 0,
+                    set3Team1: parseInt(scores.set3Team1) || 0,
+                    set3Team2: parseInt(scores.set3Team2) || 0
+                };
+                onSubmit(finalScores);
+            };
 
-function NewMatchForm({ newMatch, setNewMatch, players, locations, onCreate, onCancel, isEditing }) {
-  const costPerPlayer = newMatch.courtFee && newMatch.selectedPlayers.length > 0 
-    ? (parseFloat(newMatch.courtFee) / newMatch.selectedPlayers.length).toFixed(2)
-    : '0.00';
+            const handleInputChange = (field, value) => {
+                // Allow empty string or valid numbers
+                if (value === '' || (!isNaN(value) && parseInt(value) >= 0 && parseInt(value) <= 7)) {
+                    setScores({...scores, [field]: value});
+                }
+            };
 
-  return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
-      <h3 className="font-semibold mb-4">New Match</h3>
-      <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Date</label>
-            <input type="date" value={newMatch.date} onChange={(e) => setNewMatch({ ...newMatch, date: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Time</label>
-            <input type="time" value={newMatch.time} onChange={(e) => setNewMatch({ ...newMatch, time: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Duration</label>
-            <select value={newMatch.duration} onChange={(e) => setNewMatch({ ...newMatch, duration: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg text-sm">
-              <option value="60">1 hour</option>
-              <option value="90">1.5 hours</option>
-              <option value="120">2 hours</option>
-            </select>
-          </div>
-        </div>
+            const team1 = teams.find(t => t.id === fixture.team1);
+            const team2 = teams.find(t => t.id === fixture.team2);
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Format</label>
-          <div className="grid grid-cols-3 gap-2">
-            {['open', 'americano', 'mexicano'].map(f => (
-              <button key={f} onClick={() => setNewMatch({ ...newMatch, format: f })}
-                className={`p-2 rounded-lg border-2 text-xs ${newMatch.format === f ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
+            return (
+                <div className="submit-score-section">
+                    <h3 style={{ color: 'var(--ace-gold)', marginBottom: '20px', fontSize: '1.2rem' }}>
+                        Enter Match Score
+                    </h3>
+                    <form onSubmit={handleSubmit}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>Set 1</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '10px', alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="7"
+                                    value={scores.set1Team1}
+                                    onChange={(e) => handleInputChange('set1Team1', e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    placeholder="0"
+                                    required
+                                    style={{ padding: '10px', textAlign: 'center', fontSize: '1.2rem' }}
+                                />
+                                <span style={{ color: 'var(--ace-gold)', fontWeight: '700' }}>-</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="7"
+                                    value={scores.set1Team2}
+                                    onChange={(e) => handleInputChange('set1Team2', e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    placeholder="0"
+                                    required
+                                    style={{ padding: '10px', textAlign: 'center', fontSize: '1.2rem' }}
+                                />
+                            </div>
+                        </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Match Type</label>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <button 
-              onClick={() => setNewMatch({ ...newMatch, openRegistration: false })}
-              className={`p-3 rounded-lg border-2 text-sm ${!newMatch.openRegistration ? 'border-indigo-500 bg-indigo-50 font-semibold' : 'border-gray-200'}`}>
-              <div className="font-medium">Fixed Players</div>
-              <div className="text-xs text-gray-500">Select players now</div>
-            </button>
-            <button 
-              onClick={() => setNewMatch({ ...newMatch, openRegistration: true, selectedPlayers: [], paymentOrganizer: null })}
-              className={`p-3 rounded-lg border-2 text-sm ${newMatch.openRegistration ? 'border-orange-500 bg-orange-50 font-semibold' : 'border-gray-200'}`}>
-              <div className="font-medium">Open Sign-Up</div>
-              <div className="text-xs text-gray-500">Players join later</div>
-            </button>
-          </div>
-          {newMatch.openRegistration && (
-            <div className="p-3 bg-orange-50 border border-orange-200 rounded text-sm">
-              <p className="font-medium text-orange-900 mb-1">📢 Open Registration Mode</p>
-              <p className="text-xs text-orange-700">You'll get a shareable link that players can use to sign themselves up.</p>
-            </div>
-          )}
-        </div>
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>Set 2</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '10px', alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="7"
+                                    value={scores.set2Team1}
+                                    onChange={(e) => handleInputChange('set2Team1', e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    placeholder="0"
+                                    required
+                                    style={{ padding: '10px', textAlign: 'center', fontSize: '1.2rem' }}
+                                />
+                                <span style={{ color: 'var(--ace-gold)', fontWeight: '700' }}>-</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="7"
+                                    value={scores.set2Team2}
+                                    onChange={(e) => handleInputChange('set2Team2', e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    placeholder="0"
+                                    required
+                                    style={{ padding: '10px', textAlign: 'center', fontSize: '1.2rem' }}
+                                />
+                            </div>
+                        </div>
 
-        {newMatch.openRegistration && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Max Players</label>
-            <input 
-              type="number" 
-              min="4" 
-              max="16" 
-              value={newMatch.maxPlayers} 
-              onChange={(e) => setNewMatch({ ...newMatch, maxPlayers: parseInt(e.target.value) || 4 })}
-              className="w-full px-3 py-2 border rounded-lg text-sm" 
-            />
-          </div>
-        )}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>Set 3</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '10px', alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="7"
+                                    value={scores.set3Team1}
+                                    onChange={(e) => handleInputChange('set3Team1', e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    placeholder="0"
+                                    required
+                                    style={{ padding: '10px', textAlign: 'center', fontSize: '1.2rem' }}
+                                />
+                                <span style={{ color: 'var(--ace-gold)', fontWeight: '700' }}>-</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="7"
+                                    value={scores.set3Team2}
+                                    onChange={(e) => handleInputChange('set3Team2', e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    placeholder="0"
+                                    required
+                                    style={{ padding: '10px', textAlign: 'center', fontSize: '1.2rem' }}
+                                />
+                            </div>
+                        </div>
 
-        {newMatch.openRegistration && newMatch.courtFee && (
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Who is paying for the court upfront?
-            </label>
-            <select
-              value={newMatch.paymentOrganizer || ''}
-              onChange={(e) => setNewMatch({ ...newMatch, paymentOrganizer: e.target.value || null })}
-              className="w-full px-3 py-2 border rounded-lg text-sm">
-              <option value="">Select player...</option>
-              {players.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-2">
-              💡 This person will be marked as paid when the match is created. Other players will pay them when they join.
-            </p>
-          </div>
-        )}
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                                Submit Score
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={onCancel}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px 30px',
+                                    background: 'transparent',
+                                    border: '2px solid var(--ace-border)',
+                                    borderRadius: '8px',
+                                    color: 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '1px'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            );
+        }
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Courts</label>
-            <input type="number" min="1" value={newMatch.courts} 
-              onChange={(e) => setNewMatch({ ...newMatch, courts: parseInt(e.target.value) || 1 })}
-              className="w-full px-3 py-2 border rounded-lg text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Total Court Fee (£)</label>
-            <input type="number" step="0.01" value={newMatch.courtFee}
-              onChange={(e) => setNewMatch({ ...newMatch, courtFee: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg text-sm" />
-          </div>
-        </div>
+        // Display name mapping - shows "Division" to users but keeps "League" in database
+        const leagueDisplayNames = {
+            'League 1': 'Division 1',
+            'League 2': 'Division 2',
+            'League 3': 'Division 3',
+            'League 4': 'Division 4',
+            'League 5': 'Division 5',
+            'Female League': 'Ladies League'
+        };
 
-        {newMatch.courtFee && newMatch.selectedPlayers.length > 0 && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-sm font-semibold text-blue-900">Cost per player: £{costPerPlayer}</div>
-            <div className="text-xs text-blue-700">£{newMatch.courtFee} ÷ {newMatch.selectedPlayers.length} players</div>
-          </div>
-        )}
+        const getDisplayName = (internalName) => {
+            return leagueDisplayNames[internalName] || internalName;
+        };
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Location</label>
-          <select value={newMatch.location} 
-            onChange={(e) => setNewMatch({ ...newMatch, location: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg text-sm">
-            <option value="">Select location...</option>
-            {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-          </select>
-        </div>
+        // Profile Editor Component
+        function ProfileEditor({ user, playerData, teams, onUpdate }) {
+            const [editing, setEditing] = useState(false);
+            const [playerName, setPlayerName] = useState(playerData?.playerName || '');
+            const [selectedTeam, setSelectedTeam] = useState(playerData?.teamId || '');
+            const [saving, setSaving] = useState(false);
 
-        {/* Payment organizer for BOTH open registration AND fixed players */}
-        {newMatch.courtFee && (
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Who paid for the court?
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {players.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => setNewMatch({ ...newMatch, paymentOrganizer: p.id })}
-                  className={`p-3 rounded-lg border-2 text-sm ${
-                    newMatch.paymentOrganizer === p.id
-                      ? 'border-green-500 bg-green-50 font-semibold'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}>
-                  {p.name}
-                  {newMatch.paymentOrganizer === p.id && ' ✓'}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              💡 This person will be marked as paid, and others will see their payment details
-            </p>
-          </div>
-        )}
+            const handleSave = async (e) => {
+                e.preventDefault();
+                setSaving(true);
 
-        {!newMatch.openRegistration && (
-          <>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Players ({newMatch.selectedPlayers.length} selected)
-              </label>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                {players.map(p => (
-                  <button key={p.id}
-                    onClick={() => {
-                      const selected = newMatch.selectedPlayers.includes(p.id);
-                      setNewMatch({
-                        ...newMatch,
-                        selectedPlayers: selected 
-                          ? newMatch.selectedPlayers.filter(id => id !== p.id)
-                          : [...newMatch.selectedPlayers, p.id],
-                        // Clear payment organizer if they're deselected
-                        paymentOrganizer: selected && newMatch.paymentOrganizer === p.id ? null : newMatch.paymentOrganizer
-                      });
-                    }}
-                    className={`p-2 text-xs rounded-lg border-2 ${
-                      newMatch.selectedPlayers.includes(p.id) 
-                        ? 'border-indigo-500 bg-indigo-50' 
-                        : 'border-gray-200'
-                    }`}>
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
+                try {
+                    await db.collection('players').doc(user.uid).update({
+                        playerName: playerName,
+                        teamId: selectedTeam,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert('Profile updated successfully!');
+                    setEditing(false);
+                    onUpdate();
+                } catch (error) {
+                    console.error('Error updating profile:', error);
+                    alert('Error updating profile: ' + error.message);
+                } finally {
+                    setSaving(false);
+                }
+            };
 
-        <div className="flex gap-2">
-          <button onClick={onCreate}
-            disabled={
-              newMatch.openRegistration 
-                ? (!newMatch.courtFee || !newMatch.paymentOrganizer)
-                : (newMatch.selectedPlayers.length < 4 || !newMatch.courtFee || !newMatch.paymentOrganizer)
+            const currentTeam = teams.find(t => t.id === playerData?.teamId);
+
+            const teamsByLeague = teams.reduce((acc, team) => {
+                if (!acc[team.league]) acc[team.league] = [];
+                acc[team.league].push(team);
+                return acc;
+            }, {});
+
+            if (editing) {
+                return (
+                    <div className="card">
+                        <h2>Edit My Profile</h2>
+                        <form onSubmit={handleSave}>
+                            <div className="form-group">
+                                <label>Your Name</label>
+                                <input
+                                    type="text"
+                                    value={playerName}
+                                    onChange={(e) => setPlayerName(e.target.value)}
+                                    required
+                                    placeholder="Enter your name"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Your Team</label>
+                                <select
+                                    value={selectedTeam}
+                                    onChange={(e) => setSelectedTeam(e.target.value)}
+                                    required
+                                >
+                                    <option value="">-- Select Your Team --</option>
+                                    {Object.entries(teamsByLeague).map(([league, leagueTeams]) => (
+                                        <optgroup key={league} label={getDisplayName(league)}>
+                                            {leagueTeams.map(team => (
+                                                <option key={team.id} value={team.id}>
+                                                    {team.name}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    disabled={saving}
+                                    style={{ flex: 1 }}
+                                >
+                                    {saving ? 'Saving...' : 'Save Changes'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditing(false);
+                                        setPlayerName(playerData?.playerName || '');
+                                        setSelectedTeam(playerData?.teamId || '');
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px 30px',
+                                        background: 'transparent',
+                                        border: '2px solid var(--ace-border)',
+                                        borderRadius: '8px',
+                                        color: 'var(--text-secondary)',
+                                        cursor: 'pointer',
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '1px'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                );
             }
-            className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
-            {isEditing 
-              ? 'Update Match' 
-              : (newMatch.openRegistration ? 'Create & Get Link' : 'Create Match')
+
+            return (
+                <div className="card">
+                    <h2>My Profile</h2>
+                    <div style={{ marginBottom: '30px' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ 
+                                display: 'block', 
+                                color: 'var(--text-secondary)', 
+                                fontSize: '0.9rem',
+                                marginBottom: '5px'
+                            }}>
+                                Email
+                            </label>
+                            <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>
+                                {user.email}
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ 
+                                display: 'block', 
+                                color: 'var(--text-secondary)', 
+                                fontSize: '0.9rem',
+                                marginBottom: '5px'
+                            }}>
+                                Name
+                            </label>
+                            <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>
+                                {playerData?.playerName || 'Not set'}
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ 
+                                display: 'block', 
+                                color: 'var(--text-secondary)', 
+                                fontSize: '0.9rem',
+                                marginBottom: '5px'
+                            }}>
+                                Team
+                            </label>
+                            <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>
+                                {currentTeam ? (
+                                    <>
+                                        {currentTeam.name}
+                                        <span style={{ 
+                                            marginLeft: '10px',
+                                            color: 'var(--text-secondary)',
+                                            fontSize: '0.9rem'
+                                        }}>
+                                            ({getDisplayName(currentTeam.league)})
+                                        </span>
+                                    </>
+                                ) : 'Not set'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => setEditing(true)}
+                        className="btn btn-primary"
+                    >
+                        Edit Profile
+                    </button>
+                </div>
+            );
+        }
+
+        // All League Tables Component
+        function AllLeagueTables({ teams, playerLeague }) {
+            const leagues = ['League 1', 'League 2', 'League 3', 'League 4', 'League 5', 'Female League'];
+
+            return (
+                <div>
+                    {leagues.map(league => {
+                        const leagueTeams = teams.filter(t => t.league === league);
+                        
+                        if (leagueTeams.length === 0) return null;
+
+                        const sortedTeams = [...leagueTeams].sort((a, b) => {
+                            if (b.points !== a.points) return b.points - a.points;
+                            if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
+                            return a.setsLost - b.setsLost;
+                        });
+
+                        const isMyLeague = league === playerLeague;
+
+                        return (
+                            <div key={league} className="card" style={{ 
+                                marginBottom: '30px',
+                                border: isMyLeague ? '2px solid var(--ace-gold)' : '1px solid var(--ace-border)'
+                            }}>
+                                <h2>
+                                    {getDisplayName(league)} - Standings
+                                    {isMyLeague && (
+                                        <span style={{ 
+                                            marginLeft: '15px',
+                                            fontSize: '0.9rem',
+                                            color: 'var(--ace-gold)',
+                                            fontWeight: '600'
+                                        }}>
+                                            (Your League)
+                                        </span>
+                                    )}
+                                </h2>
+                                <div className="table-wrapper">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Pos</th>
+                                                <th>Team</th>
+                                                <th>P</th>
+                                                <th>W</th>
+                                                <th>L</th>
+                                                <th>SW</th>
+                                                <th>ST</th>
+                                                <th>SL</th>
+                                                <th>Pts</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sortedTeams.map((team, index) => (
+                                                <tr key={team.id}>
+                                                    <td style={{ fontWeight: '700', color: 'var(--ace-gold)' }}>{index + 1}</td>
+                                                    <td style={{ fontWeight: '600' }}>{team.name}</td>
+                                                    <td>{team.played || 0}</td>
+                                                    <td>{team.won || 0}</td>
+                                                    <td>{team.lost || 0}</td>
+                                                    <td>{team.setsWon || 0}</td>
+                                                    <td>{team.setsTied || 0}</td>
+                                                    <td>{team.setsLost || 0}</td>
+                                                    <td style={{ fontWeight: '700', color: 'var(--ace-gold)' }}>{team.points || 0}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        // League Table Component
+        function LeagueTable({ teams, selectedLeague }) {
+            const filteredTeams = teams.filter(team => team.league === selectedLeague);
+
+            if (filteredTeams.length === 0) {
+                return (
+                    <div className="card">
+                        <h2>{getDisplayName(selectedLeague)} - Standings</h2>
+                        <div className="empty-state">
+                            <p>No teams found</p>
+                        </div>
+                    </div>
+                );
             }
-          </button>
-          
-          {isEditing && onCancel && (
-            <button onClick={onCancel}
-              className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
-              Cancel
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function PlayersView({ players, isAdmin, showNewPlayer, setShowNewPlayer, playerForm, setPlayerForm, editingPlayer, setEditingPlayer, onAddPlayer, onUpdatePlayer }) {
-  const deletePlayer = async (playerId, playerName) => {
-    if (!confirm(`Are you sure you want to delete ${playerName}? This cannot be undone.`)) {
-      return;
-    }
-    
-    try {
-      await db.collection('players').doc(playerId).delete();
-    } catch (error) {
-      alert('Failed to delete player: ' + error.message);
-    }
-  };
+            const sortedTeams = [...filteredTeams].sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
+                return a.setsLost - b.setsLost;
+            });
 
-  return (
-    <div className="space-y-4">
-      {players.map(p => (
-        <div key={p.id} className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <h3 className="font-semibold">{p.name}</h3>
-              {isAdmin && p.email && <p className="text-xs text-gray-500">📧 {p.email}</p>}
-            </div>
-            {isAdmin && (
-              <div className="flex gap-2">
-                <button onClick={() => {
-                  setEditingPlayer(p.id);
-                  setPlayerForm({
-                    name: p.name,
-                    paypalLink: p.paypalLink || '',
-                    revolutLink: p.revolutLink || '',
-                    sortCode: p.sortCode || '',
-                    accountNumber: p.accountNumber || '',
-                    email: p.email || ''
-                  });
-                }} className="text-indigo-600 hover:text-indigo-800">
-                  <Icon name="edit" />
-                </button>
-                <button 
-                  onClick={() => deletePlayer(p.id, p.name)}
-                  className="text-red-600 hover:text-red-800">
-                  <Icon name="trash-2" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
+            return (
+                <div className="card">
+                    <h2>{getDisplayName(selectedLeague)} - Standings</h2>
+                    <div className="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Team</th>
+                                    <th>P</th>
+                                    <th>W</th>
+                                    <th>L</th>
+                                    <th>SW</th>
+                                    <th>ST</th>
+                                    <th>SL</th>
+                                    <th>Pts</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedTeams.map((team, index) => (
+                                    <tr key={team.id}>
+                                        <td style={{ fontWeight: '700', color: 'var(--ace-gold)' }}>{index + 1}</td>
+                                        <td style={{ fontWeight: '600' }}>{team.name}</td>
+                                        <td>{team.played || 0}</td>
+                                        <td>{team.won || 0}</td>
+                                        <td>{team.lost || 0}</td>
+                                        <td>{team.setsWon || 0}</td>
+                                        <td>{team.setsTied || 0}</td>
+                                        <td>{team.setsLost || 0}</td>
+                                        <td style={{ fontWeight: '700', color: 'var(--ace-gold)' }}>{team.points || 0}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
 
-      {isAdmin && (
-        <button onClick={() => setShowNewPlayer(!showNewPlayer)}
-          className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-          {showNewPlayer ? 'Cancel' : 'Add Player'}
-        </button>
-      )}
+        // Results View Component
+        function ResultsView({ teams, selectedLeague, activeTab }) {
+            const [results, setResults] = useState([]);
+            const [loading, setLoading] = useState(true);
 
-      {isAdmin && showNewPlayer && (
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <h3 className="font-semibold mb-4">New Player</h3>
-          <div className="space-y-3">
-            <input type="text" placeholder="Name" value={playerForm.name}
-              onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg" />
-            <input type="email" placeholder="Email (optional)" value={playerForm.email}
-              onChange={(e) => setPlayerForm({ ...playerForm, email: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg" />
-            <input type="url" placeholder="PayPal Link" value={playerForm.paypalLink}
-              onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg" />
-            <input type="url" placeholder="Revolut Link" value={playerForm.revolutLink}
-              onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg" />
-            <div className="grid grid-cols-2 gap-2">
-              <input type="text" placeholder="Sort Code (12-34-56)" value={playerForm.sortCode}
-                onChange={(e) => setPlayerForm({ ...playerForm, sortCode: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg" />
-              <input type="text" placeholder="Account Number" value={playerForm.accountNumber}
-                onChange={(e) => setPlayerForm({ ...playerForm, accountNumber: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg" />
-            </div>
-            <button onClick={onAddPlayer} className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-              Add Player
-            </button>
-          </div>
-        </div>
-      )}
+            useEffect(() => {
+                if (activeTab === 'results') {
+                    loadResults();
+                }
+            }, [selectedLeague, activeTab]);
 
-      {editingPlayer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="font-semibold mb-4">Edit Player</h3>
-            <div className="space-y-3">
-              <input type="text" placeholder="Name" value={playerForm.name}
-                onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg" />
-              <input type="email" placeholder="Email (optional)" value={playerForm.email}
-                onChange={(e) => setPlayerForm({ ...playerForm, email: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg" />
-              <input type="url" placeholder="PayPal Link" value={playerForm.paypalLink}
-                onChange={(e) => setPlayerForm({ ...playerForm, paypalLink: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg" />
-              <input type="url" placeholder="Revolut Link" value={playerForm.revolutLink}
-                onChange={(e) => setPlayerForm({ ...playerForm, revolutLink: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg" />
-              <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Sort Code (12-34-56)" value={playerForm.sortCode}
-                  onChange={(e) => setPlayerForm({ ...playerForm, sortCode: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg" />
-                <input type="text" placeholder="Account Number" value={playerForm.accountNumber}
-                  onChange={(e) => setPlayerForm({ ...playerForm, accountNumber: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg" />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={onUpdatePlayer} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                  Save
-                </button>
-                <button onClick={() => {
-                  setEditingPlayer(null);
-                  setPlayerForm({ name: '', paypalLink: '', revolutLink: '', sortCode: '', accountNumber: '', email: '' });
-                }} className="flex-1 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+            const loadResults = async () => {
+                try {
+                    setLoading(true);
+                    console.log('Loading results for league:', selectedLeague);
+                    
+                    const snapshot = await db.collection('fixtures')
+                        .where('completed', '==', true)
+                        .get(); // Remove orderBy to avoid index requirement
+                    
+                    console.log('Found', snapshot.size, 'completed fixtures');
+                    
+                    const resultsData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    // Sort by completedAt in JavaScript instead
+                    resultsData.sort((a, b) => {
+                        if (!a.completedAt || !b.completedAt) return 0;
+                        return b.completedAt.seconds - a.completedAt.seconds;
+                    });
+                    
+                    setResults(resultsData);
+                    console.log('Results loaded:', resultsData.length);
+                    setLoading(false);
+                } catch (error) {
+                    console.error('Error loading results:', error);
+                    setLoading(false);
+                }
+            };
 
-ReactDOM.render(<App />, document.getElementById('root'));
+            const getTeamName = (teamId) => {
+                const team = teams.find(t => t.id === teamId);
+                return team ? team.name : 'Unknown Team';
+            };
+
+            const getTeamLeague = (teamId) => {
+                const team = teams.find(t => t.id === teamId);
+                return team ? team.league : null;
+            };
+
+            const filteredResults = results.filter(result => {
+                const team1League = getTeamLeague(result.team1);
+                return team1League === selectedLeague;
+            });
+
+            if (loading) {
+                return (
+                    <div className="card">
+                        <h2>{getDisplayName(selectedLeague)} - Recent Results</h2>
+                        <div className="empty-state">
+                            <p>Loading results...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (filteredResults.length === 0) {
+                return (
+                    <div className="card">
+                        <h2>{getDisplayName(selectedLeague)} - Recent Results</h2>
+                        <div className="empty-state">
+                            <p>No results yet</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="card">
+                    <h2>{getDisplayName(selectedLeague)} - Recent Results</h2>
+                    {filteredResults.map((result) => {
+                        const team1Sets = [
+                            result.set1Team1 > result.set1Team2 ? 1 : 0,
+                            result.set2Team1 > result.set2Team2 ? 1 : 0,
+                            result.set3Team1 > result.set3Team2 ? 1 : 0
+                        ].reduce((a, b) => a + b, 0);
+
+                        const team2Sets = [
+                            result.set1Team2 > result.set1Team1 ? 1 : 0,
+                            result.set2Team2 > result.set2Team1 ? 1 : 0,
+                            result.set3Team2 > result.set3Team1 ? 1 : 0
+                        ].reduce((a, b) => a + b, 0);
+
+                        return (
+                            <div key={result.id} className="fixture">
+                                <div className="fixture-teams">
+                                    <div className="fixture-team">
+                                        {getTeamName(result.team1)}
+                                        <span style={{ 
+                                            marginLeft: '15px', 
+                                            color: 'var(--ace-gold)', 
+                                            fontWeight: '700',
+                                            fontSize: '1.3rem'
+                                        }}>
+                                            {team1Sets}
+                                        </span>
+                                    </div>
+                                    <div className="vs">-</div>
+                                    <div className="fixture-team" style={{ textAlign: 'right' }}>
+                                        <span style={{ 
+                                            marginRight: '15px', 
+                                            color: 'var(--ace-gold)', 
+                                            fontWeight: '700',
+                                            fontSize: '1.3rem'
+                                        }}>
+                                            {team2Sets}
+                                        </span>
+                                        {getTeamName(result.team2)}
+                                    </div>
+                                </div>
+                                <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    marginTop: '10px',
+                                    fontSize: '0.9rem',
+                                    color: 'var(--text-secondary)'
+                                }}>
+                                    <div>
+                                        Sets: {result.set1Team1}-{result.set1Team2} | {result.set2Team1}-{result.set2Team2} | {result.set3Team1}-{result.set3Team2}
+                                    </div>
+                                    <div>
+                                        Submitted by: {result.completedBy}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        // Render App
+        ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
 </html>
